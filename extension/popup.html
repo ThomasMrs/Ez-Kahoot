@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ez-Kahoot Companion</title>
+  <link rel="stylesheet" href="popup.css">
+  <script type="module" src="popup.js"></script>
+</head>
+<body>
+  <header class="top"><span class="logo" aria-hidden="true">Ez</span><div><strong>Ez-Kahoot<span>.</span></strong><p>LE COMPAGNON DE TON QUIZ</p></div><span class="version">1.1</span></header>
+  <main>
+    <section id="connection" class="surface">
+      <div class="section-heading"><h1>Relie ton espace.</h1><span class="status-dot" id="status-dot" aria-hidden="true"></span></div>
+      <p class="muted" id="connection-status" role="status">Copie le code depuis l’onglet Compagnon d’Ez-Kahoot.</p>
+      <form id="connect-form"><label for="connection-code">Code de connexion local</label><textarea id="connection-code" rows="2" spellcheck="false" autocomplete="off" placeholder="EZK1.…" required></textarea><button class="button primary" type="submit">Connecter</button></form>
+      <div id="connected-actions" hidden><div class="local-address" id="local-address"></div><div class="button-row"><button type="button" class="button secondary" id="open-panel">Ouvrir Ez-Kahoot <span aria-hidden="true">↗</span></button><button type="button" class="text-button" id="forget">Déconnecter</button></div></div>
+    </section>
+    <section class="capture-section" aria-labelledby="capture-title">
+      <div class="section-heading"><h2 id="capture-title">La question, en un clic.</h2><button type="button" class="text-button" id="reread" disabled>Relire</button></div>
+      <p class="muted">Lis le texte affiché dans ton onglet Kahoot, puis retrouve-le dans le corrigé.</p>
+      <button type="button" class="button primary wide" id="read-tab" disabled>Lire cet onglet <span aria-hidden="true">→</span></button>
+      <p class="capture-status" id="capture-status" role="status"></p>
+      <details id="manual-details"><summary>Ou saisir la question manuellement</summary><form id="manual-form"><label for="manual-question">Question à retrouver</label><textarea id="manual-question" rows="3" maxlength="2000" placeholder="Colle le texte exact de la question…" required></textarea><button type="submit" class="button secondary" id="manual-submit" disabled>Retrouver la réponse</button></form></details>
+    </section>
+    <section id="results-section" class="results-section" aria-live="polite"><div class="empty-result"><span aria-hidden="true">?</span><p>La prochaine réponse commence par une question.</p></div></section>
+    <p class="scope-note">Le compagnon consulte le quiz public ou importé que tu as choisi. Si le texte ou le corrigé manque, il l’indique.</p>
+  </main>
+  <footer><span>CRÉÉ PAR <strong>thomas marsa</strong></span><span>En local.</span></footer>
+</body>
+</html>

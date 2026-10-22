@@ -1,0 +1,545 @@
+{
+  "id": "77c46705-dab1-4ca1-a435-c287194db522",
+  "title": "brainwave",
+  "description": "Explorez un podcast captivant sur les expériences menées par Isaline et Lena, la structure des neurones, le rôle de l’IA dans la recherche et pourquoi le cerveau de la mouche est un modèle idéal pour comprendre le fonctionnement cérébral.",
+  "sourceUrl": "https://create.kahoot.it/details/77c46705-dab1-4ca1-a435-c287194db522",
+  "cover": null,
+  "questions": [
+    {
+      "id": "1",
+      "index": 1,
+      "question": "Where did the researchers conduct the experiment explained by Isaline ?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 15.0,
+      "choices": [
+        {
+          "text": "Harvard",
+          "correct": false
+        },
+        {
+          "text": "Princeton",
+          "correct": true
+        },
+        {
+          "text": "Oxford",
+          "correct": false
+        },
+        {
+          "text": "Cambridge",
+          "correct": false
+        }
+      ],
+      "image": null
+    },
+    {
+      "id": "2",
+      "index": 2,
+      "question": "What was the main theme of the podcast ?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 30.0,
+      "choices": [
+        {
+          "text": "The possibility of a body existing brain a outside",
+          "correct": false
+        },
+        {
+          "text": "The possibility of a body existing outside a brain",
+          "correct": false
+        },
+        {
+          "text": "The possibility of a brain existing outside a body",
+          "correct": true
+        },
+        {
+          "text": "The possibility D",
+          "correct": false
+        }
+      ],
+      "image": "https://media.kahoot.it/64f74789-ec63-4073-ad91-9738203883a9"
+    },
+    {
+      "id": "3",
+      "index": 3,
+      "question": "What is a neuron?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "A part of the brain that help us to see",
+          "correct": false
+        },
+        {
+          "text": "A cell that transmits information in the nervous system",
+          "correct": true
+        },
+        {
+          "text": "A program",
+          "correct": false
+        },
+        {
+          "text": "A part of a robot",
+          "correct": false
+        }
+      ],
+      "image": "https://media.kahoot.it/340c56c6-e9dd-47c9-a547-38a030843ad9"
+    },
+    {
+      "id": "4",
+      "index": 4,
+      "question": "Why is AI useful in this experiment?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "It can help process a huge amount of information",
+          "correct": true
+        },
+        {
+          "text": "It can think exactly like a human",
+          "correct": false
+        },
+        {
+          "text": "It replaces all the scientists",
+          "correct": false
+        },
+        {
+          "text": "It creates real flies",
+          "correct": false
+        }
+      ],
+      "image": null
+    },
+    {
+      "id": "5",
+      "index": 5,
+      "question": "Why is a fly’s brain a good starting point for this type of research?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "It is larger than a human brain",
+          "correct": false
+        },
+        {
+          "text": "It is simpler and easier to study than a human brain",
+          "correct": true
+        },
+        {
+          "text": "Flies are more intelligent than humans",
+          "correct": false
+        },
+        {
+          "text": "Flies don’t have neurons",
+          "correct": false
+        }
+      ],
+      "image": null
+    },
+    {
+      "id": "6",
+      "index": 6,
+      "question": "Lena compared studying a fly's brain to what ?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "Learning to drive before flying a plane",
+          "correct": false
+        },
+        {
+          "text": "Learning to write in a notebook before filling a library",
+          "correct": true
+        },
+        {
+          "text": "Building a house before buying a car",
+          "correct": false
+        },
+        {
+          "text": "Playing a game before writing a book",
+          "correct": false
+        }
+      ],
+      "image": null
+    },
+    {
+      "id": "7",
+      "index": 7,
+      "question": "What is one important limitation of the experiment?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "Scientists don’t know what neurons are",
+          "correct": false
+        },
+        {
+          "text": "A digital model is not necessarily a perfect copy of a real brain",
+          "correct": true
+        },
+        {
+          "text": "Flies cannot be studied",
+          "correct": false
+        },
+        {
+          "text": "Computers cannot store information",
+          "correct": false
+        }
+      ],
+      "image": null
+    },
+    {
+      "id": "8",
+      "index": 8,
+      "question": "What does “connectome” refer to?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "A map of connections between neurons",
+          "correct": true
+        },
+        {
+          "text": "A computer connected to the Internet",
+          "correct": false
+        },
+        {
+          "text": "A type of artificial intelligence",
+          "correct": false
+        },
+        {
+          "text": "A medical scanner",
+          "correct": false
+        }
+      ],
+      "image": null
+    },
+    {
+      "id": "9",
+      "index": 9,
+      "question": "What could be a possible future step after studying a fly’s brain?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "Creating a complete digital model of a more complex brain",
+          "correct": true
+        },
+        {
+          "text": "Giving flies human intelligence",
+          "correct": false
+        },
+        {
+          "text": "Replacing every scientist with AI",
+          "correct": false
+        },
+        {
+          "text": "Making humans physically smaller",
+          "correct": false
+        }
+      ],
+      "image": null
+    },
+    {
+      "id": "10",
+      "index": 10,
+      "question": "How did the researchers get the images of the fly’s brain?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "They scanned it with an MRI machine",
+          "correct": false
+        },
+        {
+          "text": "They cut it into thousands of tiny sections",
+          "correct": true
+        },
+        {
+          "text": "They used a regular camera on a living fly",
+          "correct": false
+        },
+        {
+          "text": "They copied it from another laboratory",
+          "correct": false
+        }
+      ],
+      "image": null
+    },
+    {
+      "id": "11",
+      "index": 11,
+      "question": "What role does AI play in the Princeton study?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "It feeds the fly",
+          "correct": false
+        },
+        {
+          "text": "It cuts the brain into sections",
+          "correct": false
+        },
+        {
+          "text": "It writes the podcast",
+          "correct": false
+        },
+        {
+          "text": "It reconstructs the nervous system in 3D from the images",
+          "correct": true
+        }
+      ],
+      "image": null
+    },
+    {
+      "id": "12",
+      "index": 12,
+      "question": "According to the podcast, what can people do with the fly’s brain data?",
+      "type": "quiz",
+      "multiSelect": true,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "Nothing",
+          "correct": false
+        },
+        {
+          "text": "Only scientists at Princeton can use it",
+          "correct": false
+        },
+        {
+          "text": "Anyone can use it and write their own code",
+          "correct": true
+        },
+        {
+          "text": "They can learn it to doomscroll on tiktok",
+          "correct": true
+        }
+      ],
+      "image": null
+    },
+    {
+      "id": "13",
+      "index": 13,
+      "question": "Which of these has NOT been done with the fly’s brain data?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "Making the fly play Doom",
+          "correct": false
+        },
+        {
+          "text": "Solving a Rubik’s Cube",
+          "correct": false
+        },
+        {
+          "text": "Trading Bitcoin",
+          "correct": false
+        },
+        {
+          "text": "Teaching the fly to speak French",
+          "correct": true
+        }
+      ],
+      "image": null
+    },
+    {
+      "id": "14",
+      "index": 14,
+      "question": "What is the DishBrain project about?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "Growing living neurons that learn to play Pong",
+          "correct": true
+        },
+        {
+          "text": "Building a robot that looks like a fly",
+          "correct": false
+        },
+        {
+          "text": "Mapping the human brain",
+          "correct": false
+        },
+        {
+          "text": "Creating a new video game console",
+          "correct": false
+        }
+      ],
+      "image": null
+    },
+    {
+      "id": "15",
+      "index": 15,
+      "question": "What kind of neurons did Dr. Brett Kagan’s team use?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "Only fly neurons",
+          "correct": false
+        },
+        {
+          "text": "Mouse neurons and human neurons derived from stem cells",
+          "correct": true
+        },
+        {
+          "text": "Only neurons from adult humans",
+          "correct": false
+        },
+        {
+          "text": "Neurons from robots",
+          "correct": false
+        }
+      ],
+      "image": null
+    },
+    {
+      "id": "16",
+      "index": 16,
+      "question": "Why is it difficult to replicate a human brain “for now”?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "Humans don’t have neurons",
+          "correct": false
+        },
+        {
+          "text": "There are not enough electron microscopes in the world",
+          "correct": false
+        },
+        {
+          "text": "It is not ethical, and the human brain is far more complex",
+          "correct": true
+        },
+        {
+          "text": "Nobody is interested in the human brain",
+          "correct": false
+        }
+      ],
+      "image": null
+    },
+    {
+      "id": "17",
+      "index": 17,
+      "question": "According to Isa, what is the main purpose of replicating a brain?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "To create a perfect copy of a living fly",
+          "correct": false
+        },
+        {
+          "text": "To make money with video games",
+          "correct": false
+        },
+        {
+          "text": "To better understand how connected neurons work",
+          "correct": true
+        },
+        {
+          "text": "To replace real flies in experiments",
+          "correct": false
+        }
+      ],
+      "image": null
+    },
+    {
+      "id": "18",
+      "index": 18,
+      "question": "What does the word “immortal” suggest when talking about the fly’s brain data?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "It has zhonya and full stacked heartsteel",
+          "correct": false
+        },
+        {
+          "text": "It will exist online indefinitely",
+          "correct": true
+        },
+        {
+          "text": "It is very old",
+          "correct": false
+        },
+        {
+          "text": "It belongs to a dead fly",
+          "correct": false
+        }
+      ],
+      "image": null
+    },
+    {
+      "id": "19",
+      "index": 19,
+      "question": "Why does Léna compare the fly brain to “a small notebook” and the human brain to “an entire library”?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "Because Fly dont know how to read",
+          "correct": false
+        },
+        {
+          "text": "To explain that the human brain is much bigger and more complex",
+          "correct": true
+        },
+        {
+          "text": "To say that brains are made of paper",
+          "correct": false
+        },
+        {
+          "text": "Because Shakespear was maybe a fly (theory)",
+          "correct": false
+        }
+      ],
+      "image": null
+    },
+    {
+      "id": "20",
+      "index": 20,
+      "question": "Was it fun ?",
+      "type": "quiz",
+      "multiSelect": false,
+      "timeLimit": 20.0,
+      "choices": [
+        {
+          "text": "YES",
+          "correct": true
+        },
+        {
+          "text": "YES IN BLUE",
+          "correct": false
+        }
+      ],
+      "image": "https://media.kahoot.it/fe5f7172-aca1-4170-a4f6-175d72308dc0"
+    }
+  ],
+  "slideCount": 3,
+  "creator": "carcelesfranck",
+  "loadedAt": "2026-10-21T21:04:18.054437+00:00",
+  "demo": true
+}

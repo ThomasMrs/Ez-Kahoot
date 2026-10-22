@@ -1,0 +1,6 @@
+GSAP 3.12.5
+Copyright GreenSock.
+Standard 'no charge' license: https://gsap.com/standard-license. Club GSAP members get more: https://gsap.com/licensing/. Why GreenSock doesn't employ an MIT license: https://gsap.com/why-license/
+
+Original distribution header is preserved in gsap.min.js.
+Source: https://github.com/greensock/GSAP
