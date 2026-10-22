@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Ez-Kahoot Companion",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Relie la question visible à un corrigé chargé dans Ez-Kahoot. Créé par thomas marsa.",
   "permissions": [
     "activeTab",

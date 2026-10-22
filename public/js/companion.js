@@ -1,6 +1,6 @@
 import { escapeHtml as esc } from './data.js';
-import { findMatches } from '../shared/matching.js?v=1.4.0';
-import { copyConsoleScript, downloadConsoleScript } from './console-builder.js?v=1.4.0';
+import { findMatches } from '../shared/matching.js?v=1.4.1';
+import { copyConsoleScript, downloadConsoleScript } from './console-builder.js?v=1.4.1';
 
 const symbols = {
   link: '<path d="m10 13 4-4m-6 7-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 1 1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0"/>',

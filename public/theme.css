@@ -187,14 +187,6 @@ button, a, input, textarea, summary { touch-action: manipulation; }
 .tools-panel-heading h2 { font-weight: 800; }
 .tools-panel-number { color: var(--purple); border-color: #b69ad9; font-weight: 800; }
 .tools-panel-heading>svg { color: var(--purple); }
-.tools-field input, .tools-field select { color: var(--ink); background: #fff; border: 2px solid #85858f; border-radius: 4px; }
-.tools-field input::placeholder { color: #666670; opacity: 1; }
-.tools-button { border-radius: 4px; font-weight: 800; }
-.tools-button-dark { color: #fff; background: var(--purple); box-shadow: 0 4px 0 var(--purple-dark); }
-.tools-button-dark:hover { background: #5625a4; }
-.tools-text-button, .tools-copy-button { color: var(--purple); }
-.tools-copy-button:hover { color: var(--purple-dark); background: var(--purple-soft); }
-.tools-view .tools-nickname-number { color: var(--muted); }
 .tools-sound-dot { background: var(--purple); }
 .tools-sound { color: #fff; background: var(--answer-red); border: 0; border-radius: 4px; box-shadow: 0 4px 0 #a11028; font-weight: 800; }
 .tools-sound:hover:not(:disabled) { background: #c51634; }

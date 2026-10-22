@@ -1,4 +1,4 @@
-# Ez-Kahoot 1.4.0
+# Ez-Kahoot 1.4.1
 
 Un panel local en français avec quatre vues : **Explorer**, **Compagnon**, **Bibliothèque** et **Boîte à outils**. Consulte les corrigés de quiz publics ou importés, retrouve une réponse dans ton onglet Kahoot et conserve tes quiz. Créé par **thomas marsa**.
 
@@ -50,7 +50,7 @@ Un redémarrage du serveur ou **Régénérer le code** invalide le code précéd
 
 ## Explorer et conserver un quiz
 
-Colle un lien public Kahoot ou un UUID dans **Explorer**, importe un JSON, ou essaie le quiz d’exemple **brainwave**. Révèle les réponses, recherche dans le corrigé et exporte en TXT, CSV, JSON ou impression/PDF. Le bouton d’enregistrement conserve le quiz dans **Bibliothèque**. La **Boîte à outils** propose des pseudos et des sons.
+Colle un lien public Kahoot ou un UUID dans **Explorer**, importe un JSON, ou essaie le quiz d’exemple **brainwave**. Révèle les réponses, recherche dans le corrigé et exporte en TXT, CSV, JSON ou impression/PDF. Le bouton d’enregistrement conserve le quiz dans **Bibliothèque**. La **Boîte à outils** propose quatre bruitages, avec volume réglable et arrêt immédiat.
 
 Les imports acceptent un document Kahoot brut ou un export Ez-Kahoot : **8 Mo**, **500 éléments** et **20 choix par question** au maximum. Les diapositives et les formats sans choix sont comptés séparément. Les corrections non renseignées restent inconnues. Les textes, images et durées sont conservés lorsqu’ils sont disponibles.
 

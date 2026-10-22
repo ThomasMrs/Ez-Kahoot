@@ -2,8 +2,8 @@ import { icon } from './icons.js';
 import { readLibrary, saveQuiz as persistQuiz, escapeHtml as esc } from './data.js';
 import { renderLibrary } from './library.js';
 import { exportQuiz, copyAnswers, printQuiz } from './exports.js';
-import { renderTools } from './tools.js';
-import { renderCompanion } from './companion.js?v=1.4.0';
+import { renderTools } from './tools.js?v=1.4.1';
+import { renderCompanion } from './companion.js?v=1.4.1';
 
 const views = [
   { id: 'explorer', label: 'Explorer', icon: 'grid' },
@@ -111,7 +111,7 @@ function artwork() {
 }
 
 function renderWelcome() {
-  root.innerHTML = `<section class="intro-top"><div><div class="page-kicker"><span class="kicker-line" aria-hidden="true"></span> LE MULTITOOL QUI A DE LA SUITE DANS LES IDÉES</div><h1>Le quiz.<br class="mobile-break"> Sous contrôle.</h1><p class="intro-copy">Les bonnes réponses, les bons outils, au même endroit.<br>Explore, retrouve et prépare ta prochaine partie.</p></div><span class="season-tag">TA BOÎTE À OUTILS / 01</span></section><div class="welcome-grid">${importForm()}${artwork()}</div><section class="welcome-section"><div class="section-header"><h2>Bien plus qu’un corrigé.</h2><p>TON QUIZ ET TES OUTILS, À PORTÉE DE CLIC</p></div><div class="feature-row"><button class="feature-card" data-go="companion"><div class="feature-icon">${icon('bolt')}</div>${icon('up', 'feature-arrow')}<h3>La réponse, sur ton onglet.</h3><p>Relie ton quiz au compagnon navigateur et à sa recherche rapide.</p></button><button class="feature-card" data-go="library"><div class="feature-icon">${icon('library')}</div>${icon('up', 'feature-arrow')}<h3>Tes quiz, à portée de main.</h3><p>Garde tes corrigés et retrouve-les dans ce navigateur.</p></button><button class="feature-card" data-go="tools"><div class="feature-icon">${icon('tools')}</div>${icon('up', 'feature-arrow')}<h3>Les petits outils qui vont avec.</h3><p>Prépare ton pseudo et lance quelques sons pour accompagner la partie.</p></button></div></section><div class="hint-strip">${icon('info')}<span><strong>À portée de clic.</strong> Essaie le quiz brainwave pour découvrir le panel. Tes quiz sauvegardés restent dans ce navigateur.</span></div>`;
+  root.innerHTML = `<section class="intro-top"><div><div class="page-kicker"><span class="kicker-line" aria-hidden="true"></span> LE MULTITOOL QUI A DE LA SUITE DANS LES IDÉES</div><h1>Le quiz.<br class="mobile-break"> Sous contrôle.</h1><p class="intro-copy">Les bonnes réponses, les bons outils, au même endroit.<br>Explore, retrouve et prépare ta prochaine partie.</p></div><span class="season-tag">TA BOÎTE À OUTILS / 01</span></section><div class="welcome-grid">${importForm()}${artwork()}</div><section class="welcome-section"><div class="section-header"><h2>Bien plus qu’un corrigé.</h2><p>TON QUIZ ET TES OUTILS, À PORTÉE DE CLIC</p></div><div class="feature-row"><button class="feature-card" data-go="companion"><div class="feature-icon">${icon('bolt')}</div>${icon('up', 'feature-arrow')}<h3>La réponse, sur ton onglet.</h3><p>Relie ton quiz au compagnon navigateur et à sa recherche rapide.</p></button><button class="feature-card" data-go="library"><div class="feature-icon">${icon('library')}</div>${icon('up', 'feature-arrow')}<h3>Tes quiz, à portée de main.</h3><p>Garde tes corrigés et retrouve-les dans ce navigateur.</p></button><button class="feature-card" data-go="tools"><div class="feature-icon">${icon('tools')}</div>${icon('up', 'feature-arrow')}<h3>Le son au bon moment.</h3><p>Quatre bruitages, un volume réglable et un bouton pour tout arrêter.</p></button></div></section><div class="hint-strip">${icon('info')}<span><strong>À portée de clic.</strong> Essaie le quiz brainwave pour découvrir le panel. Tes quiz sauvegardés restent dans ce navigateur.</span></div>`;
   bindImport();
   root.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => navigate(button.dataset.go)));
 }

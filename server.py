@@ -37,7 +37,7 @@ import webbrowser
 import zipfile
 
 
-VERSION = "1.4.0"
+VERSION = "1.4.1"
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
 EXTENSION = ROOT / "extension"

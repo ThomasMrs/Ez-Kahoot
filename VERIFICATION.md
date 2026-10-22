@@ -1,6 +1,10 @@
-# Vérifications de livraison — 1.4.0
+# Vérifications de livraison — 1.4.1
 
 Ez-Kahoot — thomas marsa · 22 octobre 2026
+
+## Retrait du générateur — 1.4.1
+
+Le générateur de pseudos, les fonctions de copie et les styles associés ont été supprimés. La vue Outils ne contient plus que quatre bruitages. Syntaxe JavaScript vérifiée ; dans Chrome à 320 et 1440 pixels, aucun contrôle du générateur ne subsiste et aucun débordement horizontal n’est observé. La lecture et l’arrêt des sons ont été exercés à volume nul. Les fonctions du compagnon sont inchangées. Les 40 tests Python et 58 tests Node ont été relancés avec succès pour la livraison 1.4.1.
 
 ## Vérifications de la version 1.4
 
