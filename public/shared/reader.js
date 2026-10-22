@@ -35,13 +35,16 @@
     (explicit ? /[\p{L}\p{N}]/u.test(value) : /\p{L}/u.test(value)) &&
     !/^(kahoot!?|game pin\b|pin\s*:|waiting\b|loading\b|you.re in\b|get ready\b|ready to join\b|en attente\b|chargement\b|classement\s*$|r[ée]sultats\s*$|c.est parti\s*!?\s*$|question\s+\d+\s*(of\s+\d+)?\s*$)/i.test(value);
   const selectors = ['[data-functional-selector="question-title"]', '[data-functional-selector="question-text"]', '[data-functional-selector="question"]', '[data-testid="question-title"]', '.question-title', '.question-text'];
+  const resultPage = /\/(?:result|results|podium|ranking|scoreboard|lobby|join)(?:\/|$)/i.test(location.pathname);
+  const roundElement = document.querySelector('[data-functional-selector="question-index-counter"]');
+  const roundId = roundElement && visible(roundElement) ? text(roundElement) : '';
   let question = '';
   let method = 'none';
-  for (const selector of selectors) {
+  for (const selector of resultPage ? [] : selectors) {
     const found = [...document.querySelectorAll(selector)].find(element => visible(element) && validText(text(element), true));
     if (found) { question = text(found); method = 'selector'; break; }
   }
-  if (!question) {
+  if (!question && !resultPage) {
     const found = [...document.querySelectorAll('main h1, main h2, [role="main"] h1, [role="main"] h2, h1, h2')]
       .find(element => visible(element) && !element.closest('nav,header,footer') && validText(text(element)));
     if (found) { question = text(found); method = 'heading'; }
@@ -49,14 +52,17 @@
   const choices = [];
   const seen = new Set();
   const choiceSelectors = ['button[data-functional-selector^="answer-"]', '[data-functional-selector^="answer-option-"]', '[data-functional-selector^="answer-button-"]', '[data-testid^="answer-option-"]', '.answer-option', '.answer-button'];
-  for (const selector of choiceSelectors) {
-    for (const element of document.querySelectorAll(selector)) {
+  for (const selector of resultPage ? [] : choiceSelectors) {
+    const elements = [...document.querySelectorAll(selector)];
+    for (const [elementIndex, element] of elements.entries()) {
       if (!visible(element)) continue;
       const value = text(element);
       if (!value || !/[\p{L}\p{N}]/u.test(value) || /^(triangle|circle|square|diamond|red|blue|yellow|green)$/i.test(value)) continue;
       if (seen.has(element)) continue;
       seen.add(element);
-      choices.push({ text: value, index: choices.length });
+      const button = element.closest('button,[role="button"]') || element;
+      choices.push({ text: value, index: choices.length, selector, elementIndex,
+        disabled: !!button.disabled || button.getAttribute('aria-disabled') === 'true' });
       if (choices.length >= 20) break;
     }
     if (choices.length) break;
@@ -82,5 +88,7 @@
       .map(anchor => /\/(details|share)\//.test(anchor.href) ? idFromUrl(anchor.href) : null).filter(Boolean));
     if (ids.size === 1) quizId = [...ids][0];
   }
-  return { url: `${location.origin}${location.pathname}`, title: document.title.slice(0, 300), quizId, question, choices, method };
+  const phase = resultPage ? 'result' : question ? 'question' : 'waiting';
+  return { url: `${location.origin}${location.pathname}`, title: document.title.slice(0, 300), quizId, question, choices, method,
+    roundId, phase, canAnswer: phase === 'question' && choices.some(choice => !choice.disabled) };
 })()

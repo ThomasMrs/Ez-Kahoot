@@ -1,6 +1,6 @@
 import { escapeHtml as esc } from './data.js';
-import { findMatches } from '../shared/matching.js';
-import { copyConsoleScript, downloadConsoleScript } from './console-builder.js';
+import { findMatches } from '../shared/matching.js?v=1.2.0';
+import { copyConsoleScript, downloadConsoleScript } from './console-builder.js?v=1.2.0';
 
 const symbols = {
   link: '<path d="m10 13 4-4m-6 7-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 1 1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0"/>',
@@ -63,7 +63,7 @@ export function renderCompanion(container, ctx) {
       <section class="cp-panel cp-connect" aria-labelledby="cp-connect-title">
         <div class="cp-panel-heading"><div class="cp-panel-icon">${icon('link')}</div><div><h2 id="cp-connect-title">Relier le navigateur</h2><p>Une extension, une connexion locale.</p></div></div>
         <a class="cp-download btn btn-primary" href="/downloads/Ez-Kahoot-Companion.zip" download>${icon('download')} Télécharger le compagnon ${icon('arrow')}</a>
-        <details class="cp-guide"><summary>Installer l’extension en trois étapes <span aria-hidden="true">+</span></summary><ol><li><strong>Décompresse l’archive.</strong><span>Garde le dossier contenant le fichier manifest.json.</span></li><li><strong>Ouvre <code>chrome://extensions</code>.</strong><span>Active le mode développeur, clique sur « Charger l’extension non empaquetée », puis choisis ce dossier.</span></li><li><strong>Ouvre Ez-Kahoot Companion.</strong><span>Épingle son icône, colle le code ci-dessous dans l’extension, puis clique sur « Connecter ».</span></li></ol></details>
+        <details class="cp-guide"><summary>Installer l’extension en trois étapes <span aria-hidden="true">+</span></summary><ol><li><strong>Décompresse l’archive.</strong><span>Garde le dossier contenant le fichier manifest.json.</span></li><li><strong>Ouvre <code>chrome://extensions</code>.</strong><span>Active le mode développeur, clique sur « Charger l’extension non empaquetée », puis choisis ce dossier.</span></li><li><strong>Ouvre Ez-Kahoot Companion.</strong><span>Épingle son icône. Clique « Connexion rapide », puis « Lancer sur Kahoot ».</span></li></ol></details>
         <div class="cp-connection-state" data-connection-region aria-live="polite"></div>
         <div class="cp-prepared" data-prepared-region></div>
         <p class="cp-session-note">La connexion reste locale. Garde Ez-Kahoot lancé pendant l’utilisation du compagnon.</p>
@@ -75,7 +75,7 @@ export function renderCompanion(container, ctx) {
         <div class="cp-results" data-results-region aria-live="polite"></div>
       </section>
     </div>
-    <section class="cp-pocket" aria-labelledby="cp-pocket-title"><div class="cp-pocket-icon" aria-hidden="true">&lt;/&gt;</div><div class="cp-pocket-copy"><p class="cp-kicker">ALTERNATIVE PONCTUELLE</p><h2 id="cp-pocket-title">Script de poche</h2><p>Le corrigé de ce quiz est embarqué. Dans la console de ton onglet Kahoot, le script affiche les correspondances et se ferme avec sa croix.</p></div><div class="cp-pocket-actions"><button type="button" class="btn btn-secondary" data-cp-action="copy-console" ${quiz ? '' : 'disabled'}>${icon('copy')} Copier le script</button><button type="button" class="cp-text-button" data-cp-action="download-console" ${quiz ? '' : 'disabled'}>${icon('download')} Télécharger .js</button></div></section>
+    <section class="cp-pocket" aria-labelledby="cp-pocket-title"><div class="cp-pocket-icon" aria-hidden="true">&lt;/&gt;</div><div class="cp-pocket-copy"><p class="cp-kicker">ALTERNATIVE PONCTUELLE</p><h2 id="cp-pocket-title">Script de poche</h2><p>Le corrigé est embarqué. Le petit panneau suit les questions ; active « Auto-clic » pour répondre lorsqu’un choix exact est identifié.</p></div><div class="cp-pocket-actions"><button type="button" class="btn btn-secondary" data-cp-action="copy-console" ${quiz ? '' : 'disabled'}>${icon('copy')} Copier le script</button><button type="button" class="cp-text-button" data-cp-action="download-console" ${quiz ? '' : 'disabled'}>${icon('download')} Télécharger .js</button></div></section>
     <section class="cp-diagnostic" aria-labelledby="cp-diagnostic-title"><div class="cp-diagnostic-intro"><p class="cp-kicker">LES DONNÉES DU QUIZ</p><h2 id="cp-diagnostic-title">Savoir ce qui est disponible.</h2><p>Les réponses proviennent du quiz chargé.</p></div><div class="cp-stat-grid"><div><strong>${questions.length}</strong><span>Questions chargées</span></div><div><strong>${knownCount}</strong><span>Avec un corrigé</span></div><div><strong>${questions.length - knownCount}</strong><span>Sans réponse connue</span></div><div><strong>${multipleCount}</strong><span>À réponses multiples</span></div></div><p class="cp-diagnostic-note">L’extension rapproche le texte visible du corrigé envoyé. Une ressemblance reste à vérifier ; un PIN seul ne fournit pas le corrigé d’un quiz.</p></section>
   </div>`;
 
@@ -95,11 +95,12 @@ export function renderCompanion(container, ctx) {
 
   function renderConnection() {
     if (disposed) return;
-    connectionRegion.innerHTML = `<div class="cp-code-heading"><label for="cp-connection-code">Code de connexion</label><span class="cp-state ${config && !connectionError ? 'is-ready' : ''}"><i aria-hidden="true"></i>${connectionBusy ? 'Connexion…' : config && !connectionError ? 'Serveur prêt' : 'À reconnecter'}</span></div>
+    const advancedOpen = connectionRegion.querySelector('details')?.open || !!connectionError;
+    connectionRegion.innerHTML = `<div class="cp-quick-start"><strong>Deux clics pour jouer.</strong><p>Dans l’extension : <b>Connexion rapide</b>, puis <b>Lancer sur Kahoot</b>. Le petit panneau reste sur la page.</p><span class="cp-state ${config && !connectionError ? 'is-ready' : ''}"><i aria-hidden="true"></i>${connectionBusy ? 'Connexion…' : config && !connectionError ? 'Serveur prêt' : 'À reconnecter'}</span></div><details class="cp-guide cp-advanced" ${advancedOpen ? 'open' : ''}><summary>Code et connexion avancée <span aria-hidden="true">+</span></summary><div class="cp-code-heading"><label for="cp-connection-code">Code de connexion</label></div>
       <div class="cp-code-field"><input id="cp-connection-code" type="${revealCode ? 'text' : 'password'}" readonly autocomplete="off" spellcheck="false" value="${esc(config?.connectionCode || '')}" placeholder="${connectionBusy ? 'Préparation du code…' : 'Code indisponible'}" ${config ? '' : 'disabled'}><button type="button" class="cp-icon-button" data-cp-action="reveal-code" aria-label="${revealCode ? 'Masquer le code de connexion' : 'Afficher le code de connexion'}" aria-pressed="${revealCode}" ${config && !connectionBusy ? '' : 'disabled'}>${icon('eye')}</button></div>
       <div class="cp-code-actions"><button type="button" class="btn btn-secondary" data-cp-action="copy-code" ${config && !connectionBusy ? '' : 'disabled'}>${icon('copy')} Copier le code</button><button type="button" class="cp-text-button" data-cp-action="${config ? 'reset' : 'retry'}" ${connectionBusy ? 'disabled' : ''}>${config ? 'Régénérer le code' : 'Réessayer'}</button></div>
       <p class="cp-code-help">Régénérer le code déconnecte les extensions déjà associées.</p>
-      ${connectionError ? `<p class="cp-error" role="alert">${esc(connectionError)}</p>` : ''}${connectionMessage ? `<p class="cp-success" role="status">${icon('check')}${esc(connectionMessage)}</p>` : ''}`;
+      </details>${connectionError ? `<p class="cp-error" role="alert">${esc(connectionError)}</p>` : ''}${connectionMessage ? `<p class="cp-success" role="status">${icon('check')}${esc(connectionMessage)}</p>` : ''}`;
   }
 
   function renderPrepared() {
@@ -168,7 +169,7 @@ export function renderCompanion(container, ctx) {
       const prepared = await request('/api/companion/quiz', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(quiz) });
       if (disposed) return;
       config.preparedQuiz = prepared;
-      connectionMessage = 'Quiz envoyé. Dans l’extension, clique sur « Lire cet onglet ».';
+      connectionMessage = 'Quiz envoyé. Dans l’extension, ouvre le panneau en direct.';
       ctx.toast('Quiz prêt dans le compagnon.');
     } catch (error) {
       if (disposed || error.name === 'AbortError') return;

@@ -4,11 +4,21 @@ import { decodeConnection, validateConnection } from './connection.js';
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const STORAGE_KEY = 'ezkConnection';
+const DEFAULT_BASE_URL = 'http://127.0.0.1:8765';
 let connection = null;
 let connected = false;
 let quiz = null;
 let capture = null;
 let busy = false;
+let quizSource = 'waiting';
+
+function updateQuizSummary() {
+  $('#quiz-origin').textContent = quiz ? quizSource === 'detected' ? 'QUIZ DÉTECTÉ' : 'QUIZ PRÉPARÉ' : 'DÉTECTION AUTOMATIQUE';
+  $('#quiz-title').textContent = quiz?.title || 'Quiz pas encore reçu';
+  $('#quiz-meta').textContent = !connected ? 'Connexion locale nécessaire.' : quiz
+    ? `${quiz.questions.length} questions · prêt à lancer`
+    : 'Il sera recherché depuis la partie.';
+}
 
 function status(message, type = '') {
   $('#capture-status').textContent = message;
@@ -19,18 +29,24 @@ function connectionStatus(message, active = false) {
   connected = active;
   $('#connection-status').textContent = message;
   $('#status-dot').classList.toggle('connected', active);
-  $('#connect-form').hidden = active;
+  document.body.setAttribute('data-connected', String(active));
+  $('#quick-connect').hidden = active;
   $('#connected-actions').hidden = !active;
-  $('#local-address').textContent = active ? connection.baseUrl : '';
+  $('#local-address').textContent = connection?.baseUrl || DEFAULT_BASE_URL;
+  if (active) $('#settings-details').open = false;
+  updateQuizSummary();
   updateButtons();
 }
 
 function updateButtons() {
   $('#read-tab').disabled = busy || !connected;
+  $('#open-live').disabled = busy || !connected;
   $('#reread').disabled = busy || !connected;
   $('#manual-submit').disabled = busy || !connected;
+  $('#manual-question').disabled = busy || !connected;
+  $('#quick-pair').disabled = busy;
   $('#connect-form button').disabled = busy;
-  $('#open-panel').disabled = busy || !connected;
+  $('#open-panel').disabled = busy;
   $('#forget').disabled = busy;
   document.body.setAttribute('aria-busy', String(busy));
 }
@@ -65,7 +81,9 @@ async function bridge(path) {
     if (response.status === 401 || response.status === 403) {
       connectionStatus('Code expiré ou refusé. Recopie le code depuis le panel.', false);
     }
-    throw new Error(data.error || 'La lecture du quiz a échoué.');
+    const error = new Error(data.error || 'La lecture du quiz a échoué.');
+    error.status = response.status;
+    throw error;
   }
   return data;
 }
@@ -75,12 +93,19 @@ async function loadQuiz(input = '') {
   const result = data.quiz || data;
   if (!Array.isArray(result.questions)) throw new Error('Le serveur n’a pas renvoyé un quiz utilisable.');
   quiz = result;
+  quizSource = input ? 'detected' : 'prepared';
+  updateQuizSummary();
   return result;
 }
 
 function showQuizReady() {
+  updateQuizSummary();
+  if (!quiz) {
+    $('#results-section').innerHTML = '<p class="empty-result">Le quiz sera recherché depuis la partie.</p>';
+    return;
+  }
   const questionCount = quiz?.questions?.length || 0;
-  $('#results-section').innerHTML = `<p class="quiz-label">${esc(quiz?.title || 'Quiz chargé')} · ${questionCount} questions</p><div class="empty-result"><span aria-hidden="true">?</span><p>Lis l’onglet Kahoot ou colle une question pour retrouver sa réponse.</p></div>`;
+  $('#results-section').innerHTML = `<p class="quiz-label">${esc(quiz?.title || 'Quiz chargé')} · ${questionCount} questions</p><p class="empty-result">Lis l’onglet ou colle une question.</p>`;
 }
 
 function matchMapping(answer) {
@@ -102,7 +127,7 @@ function showResults(query) {
   $('#results-section').innerHTML = prefix + matches.map(match => {
     const answers = Array.isArray(match.question.choices) ? match.question.choices.filter(choice => choice.correct === true) : [];
     const known = Array.isArray(match.question.choices) && match.question.choices.every(choice => typeof choice.correct === 'boolean');
-    return `<article class="result-card"><div class="result-header"><span>Question ${esc(match.question.index || '')}</span><span class="match-tag${match.exact ? '' : ' approximate'}">${match.exact ? 'Texte identique' : `Ressemblance ${Math.round(match.score * 100)} %`}</span></div><h3>${esc(match.question.question)}</h3>
+    return `<article class="result-card"><div class="result-header"><span>Question ${esc(match.question.index || '')}</span><span class="match-tag${match.exact ? '' : ' approximate'}">${match.exact ? 'Texte identique' : `Ressemblance ${Math.round(match.score * 100)} %`}</span></div><h2>${esc(match.question.question)}</h2>
       ${answers.length ? `<ul class="answers">${answers.map(answer => `<li><span class="answer-check" aria-hidden="true">✓</span><span class="answer-body"><span class="answer-text">${esc(answer.text)}</span>${matchMapping(answer.text)}${answer.image ? '<span class="visible-choice">Réponse illustrée : consulte le panel pour voir l’image.</span>' : ''}</span><button type="button" class="copy-answer" data-copy="${esc(answer.text)}" aria-label="Copier la réponse ${esc(answer.text)}">Copier</button></li>`).join('')}</ul>` : '<p class="unknown">Le quiz ne fournit pas de correction connue pour cette question.</p>'}
       ${match.ambiguous ? '<p class="result-note"><strong>Plusieurs questions se ressemblent.</strong> Compare leurs formulations avant de choisir.</p>' : ''}
       ${!match.exact ? '<p class="result-note">Correspondance approximative : vérifie la question et les propositions.</p>' : ''}
@@ -111,8 +136,7 @@ function showResults(query) {
   }).join('');
 }
 
-async function readTab() {
-  status('Lecture du texte affiché…');
+async function readActiveTab() {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
   let url;
@@ -125,6 +149,12 @@ async function readTab() {
   catch { throw new Error('Lecture refusée par le navigateur. Recharge l’onglet Kahoot puis ouvre à nouveau le compagnon.'); }
   capture = execution[0]?.result;
   if (!capture || typeof capture !== 'object') throw new Error('Le texte de cet onglet n’a pas pu être lu.');
+  return tab;
+}
+
+async function readTab() {
+  status('Lecture du texte affiché…');
+  await readActiveTab();
   await loadQuiz(capture.quizId || '');
   if (!capture.question) {
     showQuizReady();
@@ -138,25 +168,93 @@ async function readTab() {
   status(capture.method === 'heading' ? 'Titre visible lu : vérifie qu’il s’agit bien de la question.' : 'Question visible lue. Comparaison avec ton corrigé local terminée.', 'success');
 }
 
+async function openLivePanel() {
+  status('Ouverture du panneau sur ton onglet…');
+  const tab = await readActiveTab();
+  const probed = await chrome.scripting.executeScript({
+    target: { tabId: tab.id }, world: 'MAIN', files: ['probe-runtime.js']
+  });
+  const probeId = probed[0]?.result?.quizId;
+  const detectedId = typeof probeId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(probeId)
+    ? probeId.toLowerCase() : capture.quizId || '';
+  try { await loadQuiz(detectedId); }
+  catch (error) {
+    if (error.status !== 404) throw error;
+    quiz = null;
+  }
+  const questionCount = probed[0]?.result?.questionCount;
+  const total = quiz?.questions?.length + (Number(quiz?.slideCount) || 0) + (Number(quiz?.skippedCount) || 0);
+  if (questionCount && quiz && total !== questionCount) quiz = null;
+  try {
+    // Packaged code executes in Chrome's isolated world, without eval or remote code.
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['live-runtime.js'] });
+    const execution = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: preparedQuiz => {
+        if (typeof globalThis.__ezKahootStart !== 'function') throw new Error('Panneau indisponible.');
+        globalThis.__ezKahootStart(preparedQuiz);
+        return { ok: true };
+      },
+      args: [quiz]
+    });
+    if (execution[0]?.result?.ok !== true) throw new Error('Démarrage non confirmé.');
+  } catch {
+    throw new Error('Le panneau ne s’est pas ouvert. Recharge l’extension à jour puis réessaie sur ton onglet Kahoot.');
+  }
+  showQuizReady();
+  status(quiz ? 'Panneau lancé. Le clic automatique se règle sur la page.' :
+    'Panneau lancé. Détection automatique du quiz en cours.', 'success');
+}
+
+async function connectCandidate(candidate) {
+  const previous = { connection, connected, quiz, quizSource };
+  connection = candidate;
+  try {
+    const health = await bridge('/bridge/health');
+    if (health.name && health.name !== 'Ez-Kahoot') throw new Error('Ce serveur n’est pas un espace Ez-Kahoot.');
+    try { await loadQuiz(); }
+    catch (error) { if (error.status !== 404) throw error; quiz = null; }
+    await chrome.storage.local.set({ [STORAGE_KEY]: candidate });
+    connectionStatus('Connecté à Ez-Kahoot', true);
+    $('#connection-code').value = '';
+    showQuizReady();
+    status('Ouvre ton onglet Kahoot, puis lance le panneau.', 'success');
+  } catch (error) {
+    connection = previous.connection;
+    quiz = previous.quiz;
+    quizSource = previous.quizSource;
+    connectionStatus(previous.connected ? 'Connecté à Ez-Kahoot' : 'À connecter', previous.connected);
+    showQuizReady();
+    throw error;
+  }
+}
+
+async function quickPair() {
+  status('Connexion à Ez-Kahoot…');
+  let config;
+  try {
+    const response = await fetch(`${DEFAULT_BASE_URL}/api/companion/pair`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: '{}', credentials: 'omit', cache: 'no-store', signal: AbortSignal.timeout(5000)
+    });
+    if (!response.ok) throw new Error('Pairing indisponible');
+    config = await response.json();
+    if (typeof config?.connectionCode !== 'string') throw new Error('Code absent');
+    await connectCandidate(decodeConnection(config.connectionCode));
+  } catch {
+    $('#settings-details').open = true;
+    throw new Error('Lance Ez-Kahoot puis réessaie. Tu peux aussi utiliser le code dans « Connexion avancée ».');
+  }
+}
+
+$('#quick-pair').addEventListener('click', () => task(quickPair));
 $('#connect-form').addEventListener('submit', event => {
   event.preventDefault();
-  task(async () => {
-    const candidate = decodeConnection($('#connection-code').value);
-    const previous = connection;
-    connection = candidate;
-    try {
-      const health = await bridge('/bridge/health');
-      if (health.name && health.name !== 'Ez-Kahoot') throw new Error('Ce serveur n’est pas un espace Ez-Kahoot.');
-      await chrome.storage.local.set({ [STORAGE_KEY]: candidate });
-      connectionStatus('Ton espace local est connecté.', true);
-      $('#connection-code').value = '';
-      try { await loadQuiz(); showQuizReady(); status('Prêt à lire une question.', 'success'); }
-      catch (error) { status(error.message, 'error'); }
-    } catch (error) { connection = previous; throw error; }
-  });
+  task(() => connectCandidate(decodeConnection($('#connection-code').value)));
 });
 
 $('#read-tab').addEventListener('click', () => task(readTab));
+$('#open-live').addEventListener('click', () => task(openLivePanel));
 $('#reread').addEventListener('click', () => task(readTab));
 $('#manual-form').addEventListener('submit', event => {
   event.preventDefault();
@@ -170,17 +268,18 @@ $('#manual-form').addEventListener('submit', event => {
   });
 });
 $('#open-panel').addEventListener('click', () => {
-  if (connection) chrome.tabs.create({ url: `${connection.baseUrl}/#companion` });
+  chrome.tabs.create({ url: `${connection?.baseUrl || DEFAULT_BASE_URL}/#companion` });
 });
 $('#forget').addEventListener('click', () => task(async () => {
   await chrome.storage.local.remove(STORAGE_KEY);
   connection = null;
   quiz = null;
   capture = null;
-  connectionStatus('Connexion oubliée sur ce navigateur. Tu peux coller un nouveau code.', false);
-  $('#results-section').innerHTML = '<div class="empty-result"><span aria-hidden="true">?</span><p>Reconnecte ton espace pour lire un corrigé.</p></div>';
-  status('Connexion locale supprimée.');
-  $('#connection-code').focus();
+  quizSource = 'waiting';
+  connectionStatus('À connecter', false);
+  showQuizReady();
+  status('Connexion supprimée sur ce navigateur.');
+  $('#quick-pair').focus();
 }));
 $('#results-section').addEventListener('click', async event => {
   const button = event.target.closest('[data-copy]');
@@ -195,14 +294,18 @@ $('#results-section').addEventListener('click', async event => {
 task(async () => {
   try {
     const stored = await chrome.storage.local.get(STORAGE_KEY);
-    if (!stored[STORAGE_KEY]) return;
+    if (!stored[STORAGE_KEY]) { updateQuizSummary(); return; }
     connection = validateConnection(stored[STORAGE_KEY]);
     await bridge('/bridge/health');
-    connectionStatus('Ton espace local est connecté.', true);
+    connectionStatus('Connecté à Ez-Kahoot', true);
     try { await loadQuiz(); showQuizReady(); }
-    catch (error) { status(error.message, 'error'); }
+    catch (error) {
+      if (error.status !== 404) throw error;
+      quiz = null;
+      showQuizReady();
+    }
   } catch (error) {
-    connectionStatus('Reconnecte ton espace avec un code à jour.', false);
-    status(error.message, 'error');
+    connectionStatus('À reconnecter', false);
+    status('Lance Ez-Kahoot, puis clique sur « Connexion rapide ».', 'error');
   }
 });

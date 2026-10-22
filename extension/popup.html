@@ -7,25 +7,37 @@
   <link rel="stylesheet" href="popup.css">
   <script type="module" src="popup.js"></script>
 </head>
-<body>
-  <header class="top"><span class="logo" aria-hidden="true">Ez</span><div><strong>Ez-Kahoot<span>.</span></strong><p>LE COMPAGNON DE TON QUIZ</p></div><span class="version">1.1</span></header>
+<body data-connected="false">
+  <header class="top"><span class="logo" aria-hidden="true">Ez</span><strong>Ez-Kahoot<span>.</span></strong><span class="version">1.2</span></header>
   <main>
-    <section id="connection" class="surface">
-      <div class="section-heading"><h1>Relie ton espace.</h1><span class="status-dot" id="status-dot" aria-hidden="true"></span></div>
-      <p class="muted" id="connection-status" role="status">Copie le code depuis l’onglet Compagnon d’Ez-Kahoot.</p>
-      <form id="connect-form"><label for="connection-code">Code de connexion local</label><textarea id="connection-code" rows="2" spellcheck="false" autocomplete="off" placeholder="EZK1.…" required></textarea><button class="button primary" type="submit">Connecter</button></form>
-      <div id="connected-actions" hidden><div class="local-address" id="local-address"></div><div class="button-row"><button type="button" class="button secondary" id="open-panel">Ouvrir Ez-Kahoot <span aria-hidden="true">↗</span></button><button type="button" class="text-button" id="forget">Déconnecter</button></div></div>
+    <section id="connection" class="connection-strip" aria-label="Connexion locale">
+      <span class="status-dot" id="status-dot" aria-hidden="true"></span>
+      <p id="connection-status" role="status">À connecter</p>
+      <div id="connected-actions" hidden><button type="button" class="text-button" id="forget">Déconnecter</button></div>
     </section>
-    <section class="capture-section" aria-labelledby="capture-title">
-      <div class="section-heading"><h2 id="capture-title">La question, en un clic.</h2><button type="button" class="text-button" id="reread" disabled>Relire</button></div>
-      <p class="muted">Lis le texte affiché dans ton onglet Kahoot, puis retrouve-le dans le corrigé.</p>
-      <button type="button" class="button primary wide" id="read-tab" disabled>Lire cet onglet <span aria-hidden="true">→</span></button>
-      <p class="capture-status" id="capture-status" role="status"></p>
-      <details id="manual-details"><summary>Ou saisir la question manuellement</summary><form id="manual-form"><label for="manual-question">Question à retrouver</label><textarea id="manual-question" rows="3" maxlength="2000" placeholder="Colle le texte exact de la question…" required></textarea><button type="submit" class="button secondary" id="manual-submit" disabled>Retrouver la réponse</button></form></details>
+    <section id="quick-connect" class="quick-connect" aria-label="Connexion rapide">
+      <div><strong>Relie ton espace en un clic.</strong><p>Garde Ez-Kahoot lancé sur ton ordinateur.</p></div>
+      <button type="button" class="button secondary wide" id="quick-pair">Connexion rapide <span aria-hidden="true">↗</span></button>
     </section>
-    <section id="results-section" class="results-section" aria-live="polite"><div class="empty-result"><span aria-hidden="true">?</span><p>La prochaine réponse commence par une question.</p></div></section>
-    <p class="scope-note">Le compagnon consulte le quiz public ou importé que tu as choisi. Si le texte ou le corrigé manque, il l’indique.</p>
+    <section class="launch-card" aria-labelledby="launch-title">
+      <p class="eyebrow">LE COMPAGNON EN DIRECT</p>
+      <h1 id="launch-title">Tes réponses,<br>sur la page.</h1>
+      <p class="launch-description">Un petit panneau suit les questions dans ton onglet Kahoot.</p>
+      <div class="quiz-summary" role="status" aria-live="polite"><span class="quiz-symbol" aria-hidden="true">Q</span><div><span id="quiz-origin">DÉTECTION AUTOMATIQUE</span><strong id="quiz-title">Quiz pas encore reçu</strong><p id="quiz-meta">Connexion locale nécessaire.</p></div></div>
+      <button type="button" class="button primary launch-button wide" id="open-live" disabled>Lancer sur Kahoot <span aria-hidden="true">↗</span></button>
+      <p class="capture-status" id="capture-status" role="status">Ouvre ton onglet Kahoot avant de lancer.</p>
+    </section>
+    <details id="manual-details" class="secondary-panel"><summary>Rechercher une question <span aria-hidden="true">+</span></summary><div class="details-body">
+      <div class="button-row"><button type="button" class="button secondary" id="read-tab" disabled>Lire cet onglet</button><button type="button" class="text-button" id="reread" disabled>Relire</button></div>
+      <form id="manual-form"><label for="manual-question">Ou colle la question</label><textarea id="manual-question" rows="2" maxlength="2000" placeholder="Le texte de la question…" required></textarea><button type="submit" class="button secondary wide" id="manual-submit" disabled>Retrouver la réponse</button></form>
+      <section id="results-section" class="results-section" aria-live="polite"><p class="empty-result">Le corrigé apparaîtra ici.</p></section>
+    </div></details>
+    <details id="settings-details" class="secondary-panel"><summary>Connexion avancée <span aria-hidden="true">+</span></summary><div class="details-body">
+      <p class="settings-help">Un autre port ou une connexion rapide indisponible ? Copie le code depuis la vue Compagnon d’Ez-Kahoot.</p>
+      <form id="connect-form"><label for="connection-code">Code de connexion</label><textarea id="connection-code" rows="2" spellcheck="false" autocomplete="off" placeholder="EZK1.…" required></textarea><button class="button secondary wide" type="submit">Utiliser ce code</button></form>
+      <div class="settings-footer"><span class="local-address" id="local-address">http://127.0.0.1:8765</span><button type="button" class="text-button" id="open-panel">Ouvrir Ez-Kahoot ↗</button></div>
+    </div></details>
   </main>
-  <footer><span>CRÉÉ PAR <strong>thomas marsa</strong></span><span>En local.</span></footer>
+  <footer>Créé par <strong>thomas marsa</strong></footer>
 </body>
 </html>

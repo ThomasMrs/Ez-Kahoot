@@ -33,7 +33,7 @@ import webbrowser
 import zipfile
 
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
 EXTENSION = ROOT / "extension"
@@ -44,7 +44,7 @@ UUID_RE = re.compile(r"(?<![0-9a-f])[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]
 ALLOWED_HOSTS = {"create.kahoot.it", "play.kahoot.it", "kahoot.it", "www.kahoot.it"}
 EXTENSION_ORIGIN_RE = re.compile(r"chrome-extension://[a-p]{32}")
 LOOPBACK_HOST_RE = re.compile(r"(?:127\.0\.0\.1|localhost)(?::([0-9]{1,5}))?", re.I)
-EXTENSION_FILES = {"manifest.json", "popup.html", "popup.js", "popup.css", "reader.js", "matching.js", "connection.js", "background.js", "README.md"}
+EXTENSION_FILES = {"manifest.json", "popup.html", "popup.js", "popup.css", "reader.js", "matching.js", "connection.js", "background.js", "automation.js", "active-choice.js", "live-panel.js", "discovery.js", "probe-runtime.js", "live-runtime.js", "README.md"}
 
 # A comparison such as x<y is text, not an unfinished HTML element. Only hand
 # complete, recognized markup to HTMLParser; unknown angle brackets stay literal.
@@ -345,6 +345,8 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("X-Frame-Options", "DENY")
+        if urlparse(self.path).path == "/" or urlparse(self.path).path.endswith((".js", ".css", ".html")):
+            self.send_header("Cache-Control", "no-cache")
         if getattr(self, "_bridge_origin", None):
             self.send_header("Access-Control-Allow-Origin", self._bridge_origin)
             self.send_header("Vary", "Origin")
@@ -370,6 +372,14 @@ class Handler(SimpleHTTPRequestHandler):
             return False
         origin = self.headers.get("Origin")
         return not origin or origin.lower() == "http://" + self.headers.get("Host", "").lower()
+
+    def pairing_request(self) -> bool:
+        origin = self.headers.get("Origin", "")
+        if not self.loopback_request() or not EXTENSION_ORIGIN_RE.fullmatch(origin):
+            self.json_response({"error": "La connexion rapide doit être lancée depuis l’extension."}, 403)
+            return False
+        self._bridge_origin = origin
+        return True
 
     def bridge_request(self, authenticate=True) -> bool:
         self._bridge_origin = None
@@ -412,6 +422,22 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_OPTIONS(self):
         path = urlparse(self.path).path
+        if path == "/api/companion/pair":
+            if not self.pairing_request():
+                return
+            requested_headers = {value.strip().lower() for value in self.headers.get("Access-Control-Request-Headers", "").split(",") if value.strip()}
+            if self.headers.get("Access-Control-Request-Method", "").upper() != "POST" or requested_headers - {"content-type"}:
+                self.json_response({"error": "La connexion rapide attend un POST JSON."}, 405)
+                return
+            self.send_response(204)
+            self.send_header("Access-Control-Allow-Methods", "POST")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header("Access-Control-Max-Age", "600")
+            if self.headers.get("Access-Control-Request-Private-Network", "").lower() == "true":
+                self.send_header("Access-Control-Allow-Private-Network", "true")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         if not path.startswith("/bridge/"):
             self.json_response({"error": "Fonction inconnue."}, 404)
             return
@@ -525,10 +551,26 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         self._bridge_origin = None
+        path = urlparse(self.path).path
+        if path == "/api/companion/pair":
+            if not self.pairing_request():
+                return
+            try:
+                if self.read_json_body() != {}:
+                    raise QuizError("La connexion rapide attend un objet JSON vide.")
+                origin = self.headers.get("Origin")
+                with self.server.companion_lock:
+                    paired = self.server.companion_pair_origin
+                    if paired and paired != origin:
+                        raise QuizError("Une autre extension est déjà associée. Utilise le code de connexion avancé.", 409)
+                    self.server.companion_pair_origin = origin
+                    self.json_response(companion_config(self.server))
+            except QuizError as error:
+                self.json_response({"error": str(error)}, error.status)
+            return
         if not self.local_request():
             self.json_response({"error": "Origine de requête refusée."}, 403)
             return
-        path = urlparse(self.path).path
         if path not in {"/api/import", "/api/companion/quiz", "/api/companion/reset"}:
             self.json_response({"error": "Fonction inconnue."}, 404)
             return
@@ -563,6 +605,7 @@ def make_server(port: int) -> ThreadingHTTPServer:
     server.companion_token = secrets.token_urlsafe(32)
     server.companion_quiz = None
     server.companion_lock = threading.RLock()
+    server.companion_pair_origin = None
     return server
 
 

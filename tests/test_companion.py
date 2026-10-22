@@ -59,6 +59,7 @@ class CompanionBridgeTests(unittest.TestCase):
         with self.httpd.companion_lock:
             self.httpd.companion_token = server.secrets.token_urlsafe(32)
             self.httpd.companion_quiz = None
+            self.httpd.companion_pair_origin = None
 
     def request(self, path, data=None, headers=None, method=None):
         supplied = dict(headers or {})
@@ -84,7 +85,7 @@ class CompanionBridgeTests(unittest.TestCase):
     def test_connection_code_binds_token_and_actual_port(self):
         status, config, headers = self.request("/api/companion/config")
         self.assertEqual(status, 200)
-        self.assertEqual(config["version"], "1.1.0")
+        self.assertEqual(config["version"], "1.2.0")
         self.assertEqual(config["baseUrl"], self.base)
         self.assertIsNone(config["preparedQuiz"])
         self.assertTrue(config["connectionCode"].startswith("EZK1."))
@@ -93,6 +94,38 @@ class CompanionBridgeTests(unittest.TestCase):
         self.assertEqual(decoded, {"baseUrl": self.base, "token": self.httpd.companion_token})
         self.assertEqual(headers["Cache-Control"], "no-store")
         self.assertIsNone(headers.get("Access-Control-Allow-Origin"))
+
+    def test_quick_pairing_is_explicit_and_extension_origin_only(self):
+        for origin in (None, "https://kahoot.it", "https://evil.test", self.base, "null", "chrome-extension://invalid"):
+            headers = {"Origin": origin} if origin is not None else {}
+            status, payload, _ = self.request("/api/companion/pair", {}, headers)
+            self.assertEqual(status, 403)
+            self.assertNotIn("connectionCode", payload)
+        status, config, headers = self.request("/api/companion/pair", {}, {"Origin": EXTENSION_ORIGIN})
+        self.assertEqual(status, 200)
+        self.assertEqual(config["baseUrl"], self.base)
+        self.assertEqual(headers["Access-Control-Allow-Origin"], EXTENSION_ORIGIN)
+        self.assertEqual(self.httpd.companion_pair_origin, EXTENSION_ORIGIN)
+
+    def test_quick_pairing_binds_first_extension_and_rejects_malformed_body(self):
+        status, _, _ = self.request("/api/companion/pair", {"unexpected": True}, {"Origin": EXTENSION_ORIGIN})
+        self.assertEqual(status, 400)
+        self.assertIsNone(self.httpd.companion_pair_origin)
+        self.assertEqual(self.request("/api/companion/pair", {}, {"Origin": EXTENSION_ORIGIN})[0], 200)
+        other = "chrome-extension://" + "b" * 32
+        status, payload, _ = self.request("/api/companion/pair", {}, {"Origin": other})
+        self.assertEqual(status, 409)
+        self.assertNotIn("connectionCode", payload)
+        self.assertEqual(self.request("/api/companion/pair", {}, {"Origin": EXTENSION_ORIGIN})[0], 200)
+
+    def test_quick_pairing_preflight_is_precise(self):
+        headers = {"Origin": EXTENSION_ORIGIN, "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "Content-Type"}
+        status, _, response_headers = self.request("/api/companion/pair", headers=headers, method="OPTIONS")
+        self.assertEqual(status, 204)
+        self.assertEqual(response_headers["Access-Control-Allow-Origin"], EXTENSION_ORIGIN)
+        self.assertEqual(response_headers["Access-Control-Allow-Methods"], "POST")
+        for changes in ({"Access-Control-Request-Method": "GET"}, {"Access-Control-Request-Headers": "Authorization"}):
+            self.assertEqual(self.request("/api/companion/pair", headers={**headers, **changes}, method="OPTIONS")[0], 405)
 
     def test_instance_tokens_are_distinct(self):
         other = server.make_server(0)

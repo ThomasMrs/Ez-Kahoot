@@ -1,100 +1,79 @@
-# Ez-Kahoot
+# Ez-Kahoot 1.2.0
 
-Un panel local en français pour explorer un quiz Kahoot public, consulter son corrigé, s’entraîner et conserver ses quiz. La version **1.1.0** ajoute un compagnon pour navigateur. Créé par **thomas marsa**.
+Un panel local en français avec quatre vues : **Explorer**, **Compagnon**, **Bibliothèque** et **Boîte à outils**. Consulte les corrigés de quiz publics ou importés, retrouve une réponse dans ton onglet Kahoot et conserve tes quiz. Créé par **thomas marsa**.
 
-## Démarrage rapide
+## Démarrer
 
-Python **3.10 ou plus récent** doit être installé. Aucun compte, aucune clé API et aucune installation `pip` ou `npm` ne sont nécessaires.
+Python **3.10 ou plus récent** est nécessaire. Aucun compte, clé API ou paquet `pip`/`npm` à installer.
 
-- **macOS :** double-clique sur `Lancer.command`. Le navigateur s’ouvre automatiquement. Si macOS propose un éditeur, ouvre Terminal et exécute `python3 server.py` depuis ce dossier.
+- **macOS :** double-clique sur `Lancer.command`.
 - **Windows :** double-clique sur `Lancer.bat`.
-- **Linux :** ouvre un terminal dans ce dossier et exécute `python3 server.py`.
+- **Linux :** exécute `python3 server.py` depuis ce dossier.
 
-Garde la fenêtre du terminal ouverte pendant l’utilisation. Pour arrêter Ez-Kahoot, appuie sur **Ctrl+C** dans cette fenêtre. L’adresse par défaut est <http://127.0.0.1:8765>. Si Ez-Kahoot fonctionne déjà à cette adresse, le lanceur rouvre ce panel pour retrouver la même bibliothèque. Si un autre programme occupe le port, un autre port est choisi et affiché dans le terminal.
+Le panel s’ouvre à <http://127.0.0.1:8765>. Garde le terminal ouvert ; **Ctrl+C** arrête le serveur. Si le lanceur macOS s’ouvre dans un éditeur, lance `python3 server.py` depuis un terminal dans ce dossier.
 
-Pour choisir une adresse locale ou empêcher l’ouverture automatique du navigateur :
+Pour un autre port ou sans ouverture automatique :
 
 ```sh
 python3 server.py --port 8766 --no-browser
 ```
 
-Après une mise à jour des fichiers, arrête l’ancienne instance avec Ctrl+C puis relance le serveur pour charger la nouvelle version.
+Si le port est occupé par Ez-Kahoot, le lanceur rouvre le panel existant. Sinon, un port disponible est affiché. Après une mise à jour, arrête l’ancienne instance et relance le serveur.
 
-## Utilisation
+## Le compagnon sur Kahoot
 
-1. Colle le lien d’un **quiz public** ou son identifiant UUID dans le champ de recherche. Exemple : `77c46705-dab1-4ca1-a435-c287194db522`.
-2. Charge le quiz pour consulter ses questions et les réponses que son créateur a déclarées correctes.
-3. Utilise les modes d’entraînement et de fiches pour réviser, puis les exports pour conserver le contenu.
-4. Retrouve tes quiz conservés dans la bibliothèque du même navigateur.
+1. Télécharge le compagnon depuis la vue **Compagnon** et décompresse l’archive. Le dossier `extension/` de cette distribution convient aussi.
+2. Dans Chrome, ouvre `chrome://extensions`, active **Mode développeur**, clique **Charger l’extension non empaquetée** et sélectionne le dossier contenant `manifest.json`. Dans Edge, utilise `edge://extensions`.
+3. Épingle l’extension. Avec Ez-Kahoot lancé, ouvre son icône et clique **Connexion rapide**.
+4. Place-toi dans ton onglet Kahoot et clique **Lancer sur Kahoot**. Le petit panneau suit les questions et affiche les réponses connues.
+5. Active **Auto-clic** si tu souhaites envoyer une réponse vérifiée. Fermer le panneau arrête le suivi et les clics.
 
-Un quiz d’exemple permet de découvrir le panel sans requête réseau. Tu peux aussi importer un fichier JSON Kahoot brut ou un export JSON d’Ez-Kahoot. Les fichiers sont limités à **8 Mo**, **500 éléments** et **20 réponses par question**.
+Après une mise à jour de l’extension, clique sur **Actualiser** sur sa carte dans `chrome://extensions`, puis relance le panneau sur Kahoot. Le raccourci **Alt+Maj+K** ouvre l’extension si le navigateur ne l’utilise pas déjà.
 
-## Ce qui est pris en charge
+Si la page transmet l’identifiant d’un quiz public, le compagnon peut charger son corrigé automatiquement. Sinon, ouvre le quiz dans **Explorer**, puis clique **Envoyer ce quiz au compagnon** dans **Compagnon**. La recherche ponctuelle se trouve dans **Rechercher une question**, repliée dans le popup.
 
-- Lecture des quiz publics par lien ou UUID.
-- Questions à choix multiples et vrai/faux représentées par des choix de réponses.
-- Plusieurs réponses déclarées correctes, sans suppression d’un choix valide.
-- Texte, illustrations et durée lorsqu’ils sont présents dans la source.
-- Import JSON, bibliothèque dans le navigateur, entraînement, fiches et exports.
+### Quand le clic est possible
 
-Les diapositives sont comptées séparément. Les formats sans choix de réponses, comme les puzzles ou les réponses ouvertes, sont signalés comme éléments ignorés. Une réponse sans indication de correction reste **inconnue** : Ez-Kahoot n’invente pas de corrigé. L’entraînement peut demander de sélectionner tous les choix déclarés corrects, même si le quiz d’origine accepte un seul de ces choix à la fois.
+L’Auto-clic est désactivé au lancement. Il exige une question exacte et unique, un corrigé entièrement renseigné, une seule réponse correcte et une correspondance complète des textes des choix avec des boutons actifs. La question et la manche sont revérifiées avant le clic. L’ordre et les couleurs ne sont pas supposés ; un bouton n’est pas envoyé à répétition.
 
-Un **PIN de partie** n’est pas un identifiant de quiz. Ez-Kahoot consulte le document public ; il ne rejoint pas de partie en direct et ne répond pas automatiquement dans une session. Un quiz privé, supprimé ou inaccessible ne peut pas être chargé. La disponibilité des données publiques dépend du service Kahoot et peut évoluer.
+Les correspondances approximatives ou ambiguës, les réponses uniquement en images et les sélections multiples restent manuelles. Sur `/answer/result`, une correction déjà reçue est indiquée comme **Correction reçue après la question** ; elle ne déclenche aucun clic et ne sert pas à anticiper la suivante. Le score dépend des règles de la partie et du réseau.
 
-## Compagnon navigateur : la solution recommandée
+### Connexion avancée
 
-Le compagnon ajoute une lecture de l’onglet Kahoot courant et une association avec les questions d’un quiz déjà préparé. Il évite de recoller une commande dans la console à chaque navigation.
+**Connexion rapide** cherche le serveur sur le port **8765**. Elle associe la première origine d’extension valide qui la demande pour cette instance. Si tu utilises un autre port, une autre installation d’extension ou si la connexion échoue, ouvre **Connexion avancée** et colle le code `EZK1.…` visible dans **Code et connexion avancée** du panel.
 
-1. Charge un quiz dans Ez-Kahoot, puis ouvre la vue **Compagnon** et prépare ce quiz pour l’extension.
-2. Télécharge l’archive du compagnon depuis cette vue et décompresse-la. Le dossier `extension/` de cette distribution peut aussi être utilisé directement.
-3. Dans Chrome, ouvre `chrome://extensions`, active le **Mode développeur**, puis choisis **Charger l’extension non empaquetée** et sélectionne le dossier qui contient `manifest.json`. Dans Edge, utilise `edge://extensions`.
-4. Copie le code de connexion affiché dans Ez-Kahoot et colle-le dans la fenêtre de l’extension. Le serveur local doit rester ouvert.
-5. Ouvre ton onglet Kahoot, invoque le compagnon et lance la lecture. Le contenu reconnu est comparé au quiz préparé ; un lien public ou un UUID disponible permet aussi de charger le document public correspondant.
+Un redémarrage du serveur ou **Régénérer le code** invalide le code précédent. **Déconnecter** efface l’association enregistrée dans l’extension. Le quiz envoyé au compagnon reste uniquement en mémoire du serveur jusqu’à son arrêt.
 
-L’autorisation `activeTab` est temporaire et vient du clic sur l’extension. Le lecteur s’exécute dans le contexte isolé prévu par Chrome. Le compagnon ne demande pas l’accès à tous les sites. Son autorisation de communication locale sert uniquement à joindre Ez-Kahoot sur ton appareil.
+## Explorer et conserver un quiz
 
-Le code `EZK1.…` associe le compagnon à l’instance locale en cours. Le bouton de réinitialisation régénère ce code et révoque la connexion précédente, tout en conservant le quiz préparé. Un redémarrage du serveur produit également un nouveau code ; il faut alors reconnecter l’extension. Le quiz préparé n’est gardé qu’en mémoire du serveur.
+Colle un lien public Kahoot ou un UUID dans **Explorer**, importe un JSON, ou essaie le quiz d’exemple **brainwave**. Révèle les réponses, recherche dans le corrigé et exporte en TXT, CSV, JSON ou impression/PDF. Le bouton d’enregistrement conserve le quiz dans **Bibliothèque**. La **Boîte à outils** propose des pseudos et des sons.
 
-### Limites de la lecture d’une partie
+Les imports acceptent un document Kahoot brut ou un export Ez-Kahoot : **8 Mo**, **500 éléments** et **20 choix par question** au maximum. Les diapositives et les formats sans choix sont comptés séparément. Les corrections non renseignées restent inconnues. Les textes, images et durées sont conservés lorsqu’ils sont disponibles.
 
-Le lecteur dispose du contenu présent dans la page du joueur. Si l’hôte n’affiche que les formes des boutons, il peut manquer le texte nécessaire pour reconnaître la question. L’option Kahoot **Show questions & answers on participants’ devices** affiche la question et les propositions ; elle n’annonce pas la transmission du corrigé au joueur. Un PIN reste un code temporaire de session, sans promesse de correspondance universelle avec le document public du quiz.
+La bibliothèque conserve jusqu’à 24 quiz dans ce navigateur. Changer de port, de profil ou de navigateur peut afficher une autre bibliothèque ; exporter en JSON permet de garder une copie. Effacer les données du site efface aussi cette bibliothèque.
 
-Les corrections du compagnon viennent donc du quiz préparé ou d’un quiz public lisible. Un contenu manquant, un quiz différent ou une correspondance ambiguë doit être présenté comme tel. Le compagnon n’invente pas de bonne réponse et n’accède pas à un quiz privé.
+## Script console ponctuel
 
-### Alternative ponctuelle : la console
+Après avoir chargé un quiz, utilise **Compagnon → Copier le script** ou **Télécharger .js**. Le script embarque ce corrigé et le même panneau, avec Auto-clic facultatif. Une fois généré, il n’effectue aucune requête réseau et ne contient pas le code de connexion. Il faut le relancer après un changement complet de page.
 
-La vue Compagnon peut aussi préparer un script autonome à copier dans la console de ton onglet Kahoot. Le quiz choisi, le lecteur et la recherche sont embarqués dans ce script : il ne télécharge aucun code et n’envoie pas de requête réseau. Il rapproche la question visible du corrigé déjà chargé, dans une petite fenêtre sur la page. Il faut le relancer après un changement complet de page ; l’extension reste plus pratique pour un usage répété. Les mêmes limites de texte visible, de correction connue et de correspondance ambiguë s’appliquent.
+## Données et limites
 
-## Données et fonctionnement local
+Le serveur écoute seulement sur `127.0.0.1`. Le chargement d’un quiz public contacte `create.kahoot.it` ; les illustrations peuvent contacter leurs hébergeurs. L’import JSON reste local. Les quiz déjà chargés, la bibliothèque et les exports fonctionnent sans connexion ; certaines images peuvent manquer.
 
-Le serveur écoute uniquement sur `127.0.0.1`. La bibliothèque et les préférences sont enregistrées dans le stockage local du navigateur. Les exports sont téléchargés sur ton appareil. Aucun service d’analyse ou compte utilisateur n’est intégré.
+Le lecteur utilise le texte visible. Un second lecteur ciblé examine les métadonnées disponibles dans la page, la session de jeu et l’état du client pour extraire le titre ou l’UUID de quiz et, sur la page de résultat, une correction déjà révélée. Il ne transmet pas de cookie ni d’identifiant de connexion au serveur local. Les échanges du compagnon utilisent un jeton éphémère et refusent les origines de pages web ordinaires ; aucune règle CORS `*` n’est utilisée.
 
-Le chargement par UUID contacte directement `create.kahoot.it` depuis le serveur local. Les illustrations distantes peuvent être chargées depuis leurs hébergeurs. L’import JSON est traité par le serveur local et n’est pas envoyé à Kahoot. L’entraînement, les fiches et les fichiers déjà chargés restent utilisables sans Internet ; les illustrations distantes peuvent alors manquer.
+Un PIN ou une URL générique ne garantit pas l’accès au corrigé. Un identifiant de joueur ou de partie n’est pas traité comme un UUID de quiz. Si le client ne reçoit ni le texte, ni l’identifiant public, ni le corrigé, le panneau indique ce manque. Les quiz privés ou inaccessibles ne sont pas chargés par l’API publique. La compatibilité peut évoluer avec Kahoot.
 
-Le pont du compagnon est distinct des routes du panel. Ses lectures demandent un jeton de connexion ; elles n’exposent ni le code de connexion du panel, ni sa bibliothèque. Les origines de pages web ordinaires sont refusées et aucune règle CORS générique `*` n’est utilisée. Le pont ne modifie pas le quiz source : il fournit seulement le quiz préparé ou une lecture publique demandée par UUID.
+## Reconstruction et tests
 
-Le stockage dépend de l’adresse locale : changer de port, de navigateur ou de profil peut afficher une bibliothèque différente. Exporter un quiz en JSON permet de le transférer ou de le sauvegarder. Effacer les données du site dans le navigateur supprime sa bibliothèque locale.
-
-## Vérification technique
-
-Les tests du serveur utilisent uniquement la bibliothèque standard et ne contactent aucun service externe :
+Après modification des modules lisibles dans `extension/`, régénère les runtimes et fichiers partagés :
 
 ```sh
+python3 scripts/build_companion.py
 python3 -m unittest discover -s tests -v
-```
-
-Les tests facultatifs du lecteur et de la recherche nécessitent Node, sans paquet à installer :
-
-```sh
 node --test extension/tests/*.test.mjs
 ```
 
-Les essais réalisés et leurs limites sont décrits dans `VERIFICATION.md`.
+Node est facultatif et ne sert qu’aux tests ; aucun paquet n’est nécessaire. Les tests et leurs limites sont détaillés dans `VERIFICATION.md`. Les sources et licences incluses sont décrites dans `SOURCES.md`.
 
-Le code de l’interface se trouve dans `public/`. Le serveur de lecture et d’import est `server.py`. Les lanceurs sont de simples raccourcis vers ce serveur.
-
-## Crédits
-
-**Ez-Kahoot — thomas marsa**
-
-Les sources consultées et inspirations sont détaillées dans `SOURCES.md`. Ez-Kahoot est un projet indépendant ; Kahoot est la marque de son propriétaire respectif.
+**Ez-Kahoot — thomas marsa.** Projet indépendant, non affilié à Kahoot.

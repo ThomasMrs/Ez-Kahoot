@@ -1,31 +1,33 @@
-# Vérifications de livraison — 1.1.0
+# Vérifications de livraison — 1.2.0
 
 Ez-Kahoot — thomas marsa · 22 octobre 2026
 
-- **29 tests Python réussis** : lecture, import, normalisation, accès local, pont du compagnon, validation du jeton et des origines, rotation du code et archive d’extension.
-- **Deux suites Node réussies** : recherche exacte/approximative, ambiguïtés, opérateurs, exposants/indices, décodage de connexion et lecteur sur DOM simulé.
-- Lecture réelle du quiz public brainwave : 20 questions, 3 diapositives, 21 réponses déclarées correctes.
-- Parcours Chrome vérifiés : import, recherche, révélation, presse-papiers, exports, bibliothèque, entraînement 20/20 avec réponses multiples, fiches, pseudos, audio et impression.
-- Compagnon vérifié dans le panel : préparation du quiz, recherche exacte, diagnostic et téléchargement du script.
-- Extension chargée dans Chrome for Testing : connexion authentifiée au serveur local et lecture d’un onglet déclenchée depuis l’icône réelle de l’extension. La page Kahoot utilisée pour cet essai était une **fixture contrôlée**, pas une partie en direct.
-- Script autonome : syntaxe valide, quiz embarqué, aucun appel réseau ni jeton local dans le script généré. Sur fixture : recherche, suivi du changement de question, réexécution sans doublon et arrêt du suivi à la fermeture.
-- Régression mathématique dans un vrai DOM : un exposant HTML est conservé, une question sous un ancêtre transparent est écartée et deux choix identiques restent distincts. La question « 5² » retrouve son propre corrigé et ne correspond pas à « 52 ».
-- Les cinq vues initiales ont été vérifiées à 320, 768, 1024 et 1440 pixels. La nouvelle vue Compagnon avec navigation à six entrées a été vérifiée à **320, 768 et 1440 pixels CSS**, sans débordement horizontal.
-- Audit axe-core : aucune violation WCAG A/AA détectée dans les dix états initiaux et dans la vue Compagnon avec résultat révélé. Cet audit ne remplace pas un audit humain complet.
-- Import avec balises non fiables : aucun script exécuté. Export CSV protégé contre l’interprétation de formules. Comparaisons mathématiques et balises sup/sub conservées à l’import.
-- Fenêtre d’impression : 20 corrections, interface masquée.
+## Tests réussis
 
-## Relancer les tests
+- **32 tests Python** : lecture, import, normalisation, accès local, pont authentifié, contrôle des origines, rotation du code, archives et connexion rapide. Le POST d’association est refusé hors origine d’extension valide ; la première origine associée est conservée et une autre reçoit un refus.
+- **42 tests Node** : correspondances, ambiguïtés, exposants et indices, lecture du DOM, décision d’Auto-clic, sélection des boutons et découverte de métadonnées. Les champs génériques de joueur ou de partie ne sont pas acceptés comme UUID de quiz.
+- Le lecteur de métadonnées `MAIN` distingue les champs explicites `quizId`/`kahootId`, les données absentes et les identifiants contradictoires. Une correction reçue sur résultat doit appartenir à la manche courante.
+- Dans Chrome, sur page contrôlée : le panneau identifie et clique deux bons boutons successifs malgré des choix mélangés. Une question inconnue ne déclenche aucun clic. La fermeture arrête le suivi et les clics ; aucun doublon de panneau n’est conservé.
+- Le popup compact a été vérifié dans Chrome à **320 et 380 pixels**, avec une API d’extension simulée : Connexion rapide passe à l’état connecté, le bouton Lancer sur Kahoot est activé et les réglages avancés restent repliés. Les contrôles HTTP d’origine et d’association ont été vérifiés avec des requêtes synthétiques du serveur.
+- Panel à **quatre vues** : Explorer chargé, Compagnon, Bibliothèque, Boîte à outils. Chaque vue a été vérifiée dans Chrome à **320, 768, 1024 et 1440 pixels CSS** : **16 états sans débordement horizontal**. Les anciennes routes retirées reviennent à Explorer.
+- Audit axe-core : aucune violation WCAG A/AA détectée dans le popup, la vue Compagnon et le panneau superposé testé. Cet audit automatique ne remplace pas un audit humain complet.
+- Génération du script console : corrigé embarqué, syntaxe valide, aucun code de connexion ni appel réseau dans le script généré. Les modules partagés et runtimes sont reconstruits avec `scripts/build_companion.py`.
+- Import et exports : textes HTML traités sans exécution, comparaisons et sup/sub conservés ; CSV protégé contre l’interprétation de formules. Le quiz public d’exemple brainwave contient 20 questions exploitables, 3 diapositives et 21 choix déclarés corrects.
 
-Depuis ce dossier :
+## Limites de validation
+
+L’installation ou le rechargement de l’extension **actuelle** dans le navigateur personnel reste manuel : l’outil de contrôle du navigateur bloque l’accès à `chrome://extensions`. La connexion rapide depuis une véritable origine d’extension Chrome n’a donc pas été confirmée pour cette version ; les tests HTTP synthétiques et le popup simulé ne constituent pas cette validation.
+
+Les essais d’Auto-clic ont utilisé des pages contrôlées, pas une partie réelle en cours. Le fonctionnement universel sur les quiz privés, les pages sans question lisible ou les configurations ne transmettant pas l’UUID public n’a pas été établi. Une correction reçue après le résultat n’est pas une réponse obtenue à l’avance.
+
+## Relancer
+
+Depuis la racine du projet :
 
 ```sh
+python3 scripts/build_companion.py
 python3 -m unittest discover -s tests -v
 node --test extension/tests/*.test.mjs
 ```
 
-Les tests Python n’utilisent aucun service externe. Node est facultatif et ne sert qu’aux tests de l’extension ; aucune dépendance JavaScript à installer pour utiliser le panel.
-
-## Limites vérifiées
-
-Le compagnon dépend du texte affiché et d’un corrigé public ou importé. Aucune faille d’accès aux quiz privés n’a été établie. Un PIN seul ne fournit pas les réponses. Les essais sur fixtures ne garantissent pas la compatibilité de toutes les pages d’une partie Kahoot réelle ; leurs sélecteurs peuvent évoluer.
+Les tests Python utilisent la bibliothèque standard sans service externe. Node ne sert qu’aux tests JavaScript et n’exige aucun paquet supplémentaire.
