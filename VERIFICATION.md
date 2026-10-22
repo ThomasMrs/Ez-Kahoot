@@ -1,6 +1,14 @@
-# Vérifications de livraison — 1.3.0
+# Vérifications de livraison — 1.4.0
 
 Ez-Kahoot — thomas marsa · 22 octobre 2026
+
+## Vérifications de la version 1.4
+
+- **40 tests Python et 58 tests Node réussis** : recherche publique, origine et authentification du POST, corps borné, correspondances/ambiguïtés, caches, sondes, compteur réel, HTML inerte, alias booléens et garde-fous de clic. Les appels externes sont simulés dans les tests unitaires.
+- Le nouvel endpoint a aussi été testé contre Kahoot avec une question et les quatre choix précédemment reçus par le joueur : un candidat public compatible a été retourné en **1,57 seconde**, sans utiliser l’UUID vu côté animateur. Ce temps est celui d’un essai, pas une garantie de performance.
+- Dans Chrome, une page locale contrôlée reproduit le titre dans un en-tête et deux boutons inversés « Faux / Vrai », face au corrigé « True / False ». Les vrais modules lisent la question et envoient exactement un clic sur « Vrai ». Seule l’origine fournie au moteur est simulée pour permettre cette page locale ; ce n’est pas une partie réelle. Capture `Ez-Kahoot-1.4-test-local.jpg`.
+- Le panneau a affiché une réponse du candidat avant l’ouverture des boutons de la question 5 dans l’onglet joueur. Le clic automatique après les derniers correctifs n’a pas pu être revalidé sur la partie réelle, car cet onglet a ensuite été fermé. Aucun score réel n’est attribué ici aux correctifs.
+- Les runtimes, les copies partagées et le script console ont été reconstruits.
 
 ## Vérifications du thème 1.3
 

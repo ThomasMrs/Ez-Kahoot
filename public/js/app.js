@@ -3,7 +3,7 @@ import { readLibrary, saveQuiz as persistQuiz, escapeHtml as esc } from './data.
 import { renderLibrary } from './library.js';
 import { exportQuiz, copyAnswers, printQuiz } from './exports.js';
 import { renderTools } from './tools.js';
-import { renderCompanion } from './companion.js?v=1.3.0';
+import { renderCompanion } from './companion.js?v=1.4.0';
 
 const views = [
   { id: 'explorer', label: 'Explorer', icon: 'grid' },

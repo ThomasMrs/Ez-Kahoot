@@ -55,8 +55,20 @@ export function decideAnswer(quiz, capture) {
   if (visible.length !== choices.length || visible.some(choice => !choice || typeof choice.text !== 'string' || !Number.isInteger(choice.index) || choice.index < 0 || choice.index > 19)) {
     return result('unmapped', 'Les boutons visibles ne correspondent pas au corrigé.', details);
   }
-  const sourceTexts = choices.map(choice => normalizeText(choice.text));
-  const visibleTexts = visible.map(choice => normalizeText(choice.text));
+  // Kahoot localizes its two built-in boolean buttons independently of the quiz.
+  // Translate only complete boolean pairs, never a prefix or a question title.
+  const booleanText = value => {
+    const text = value.trim().toLowerCase();
+    if (text === 'true' || text === 'vrai') return 'true';
+    if (text === 'false' || text === 'faux') return 'false';
+    return null;
+  };
+  const sourceBooleans = choices.map(choice => booleanText(choice.text));
+  const visibleBooleans = visible.map(choice => booleanText(choice.text));
+  const completeBooleanPair = values => values.length === 2 && values.includes('true') && values.includes('false');
+  const localizeBooleanPair = completeBooleanPair(sourceBooleans) && completeBooleanPair(visibleBooleans);
+  const sourceTexts = localizeBooleanPair ? sourceBooleans : choices.map(choice => normalizeText(choice.text));
+  const visibleTexts = localizeBooleanPair ? visibleBooleans : visible.map(choice => normalizeText(choice.text));
   if (sourceTexts.some(text => !text) || visibleTexts.some(text => !text) || new Set(sourceTexts).size !== sourceTexts.length || new Set(visibleTexts).size !== visibleTexts.length || new Set(visible.map(choice => choice.index)).size !== visible.length) {
     return result('ambiguous', 'Propositions identiques ou non identifiables : clic suspendu.', details);
   }
@@ -64,7 +76,7 @@ export function decideAnswer(quiz, capture) {
   if (sourceTexts.some(text => !visibleByText.has(text))) {
     return result('unmapped', 'Les propositions affichées diffèrent du corrigé.', details);
   }
-  const target = visibleByText.get(normalizeText(answers[0].text));
+  const target = visibleByText.get(sourceTexts[choices.findIndex(choice => choice.correct === true)]);
   if (target.disabled === true || target.enabled === false) {
     return result('waiting', 'Le bouton de réponse n’est pas encore actif.', details);
   }

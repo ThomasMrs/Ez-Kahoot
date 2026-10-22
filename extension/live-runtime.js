@@ -133,8 +133,20 @@ function decideAnswer(quiz, capture) {
   if (visible.length !== choices.length || visible.some(choice => !choice || typeof choice.text !== 'string' || !Number.isInteger(choice.index) || choice.index < 0 || choice.index > 19)) {
     return result('unmapped', 'Les boutons visibles ne correspondent pas au corrigé.', details);
   }
-  const sourceTexts = choices.map(choice => normalizeText(choice.text));
-  const visibleTexts = visible.map(choice => normalizeText(choice.text));
+  // Kahoot localizes its two built-in boolean buttons independently of the quiz.
+  // Translate only complete boolean pairs, never a prefix or a question title.
+  const booleanText = value => {
+    const text = value.trim().toLowerCase();
+    if (text === 'true' || text === 'vrai') return 'true';
+    if (text === 'false' || text === 'faux') return 'false';
+    return null;
+  };
+  const sourceBooleans = choices.map(choice => booleanText(choice.text));
+  const visibleBooleans = visible.map(choice => booleanText(choice.text));
+  const completeBooleanPair = values => values.length === 2 && values.includes('true') && values.includes('false');
+  const localizeBooleanPair = completeBooleanPair(sourceBooleans) && completeBooleanPair(visibleBooleans);
+  const sourceTexts = localizeBooleanPair ? sourceBooleans : choices.map(choice => normalizeText(choice.text));
+  const visibleTexts = localizeBooleanPair ? visibleBooleans : visible.map(choice => normalizeText(choice.text));
   if (sourceTexts.some(text => !text) || visibleTexts.some(text => !text) || new Set(sourceTexts).size !== sourceTexts.length || new Set(visibleTexts).size !== visibleTexts.length || new Set(visible.map(choice => choice.index)).size !== visible.length) {
     return result('ambiguous', 'Propositions identiques ou non identifiables : clic suspendu.', details);
   }
@@ -142,7 +154,7 @@ function decideAnswer(quiz, capture) {
   if (sourceTexts.some(text => !visibleByText.has(text))) {
     return result('unmapped', 'Les propositions affichées diffèrent du corrigé.', details);
   }
-  const target = visibleByText.get(normalizeText(answers[0].text));
+  const target = visibleByText.get(sourceTexts[choices.findIndex(choice => choice.correct === true)]);
   if (target.disabled === true || target.enabled === false) {
     return result('waiting', 'Le bouton de réponse n’est pas encore actif.', details);
   }
@@ -219,6 +231,7 @@ function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, initialA
     .header-copy{flex:1;min-width:0}.icon-button{display:grid;place-items:center;flex:none;width:30px;height:30px;border:1px solid #9470c2;border-radius:6px;background:transparent;color:#fff;font-size:19px;line-height:1}
     .icon-button:hover{background:#25076b}.body{padding:13px 14px;max-height:min(520px,calc(100vh - 140px));overflow:auto}
     .quiz{font-size:10px;color:#645675;margin:0 0 10px;overflow-wrap:anywhere}.state{display:inline-flex;gap:6px;align-items:center;font-size:10px;font-weight:700;color:#645675;margin:0 0 9px}
+    .quiz-source{display:block;font-size:10px;color:#645675;margin:-5px 0 10px;overflow-wrap:anywhere}
     .state::before{content:'';width:6px;height:6px;flex:none;border-radius:50%;background:#8c77a4}.state[data-state=ready],.state[data-state=revealed]{color:#1f650a}.state[data-state=ready]::before,.state[data-state=revealed]::before{background:#36851f}
     .state[data-state=ambiguous],.state[data-state=unmapped],.state[data-state=unsupported]{color:#7a4200}.state[data-state=error]{color:#9f1332}
     .question{font-size:11px;font-weight:600;line-height:1.55;margin:0 0 10px;overflow-wrap:anywhere}.answers{display:grid;gap:6px;list-style:none;padding:0;margin:0}
@@ -258,6 +271,8 @@ function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, initialA
   header.append(logo, headerCopy, reduce, close);
   const body = node('div', 'body');
   const quizLabel = node('p', 'quiz', hasQuiz(quiz) ? quiz.title || 'Quiz chargé' : 'Recherche du quiz…');
+  const quizSource = node('span', 'quiz-source', 'Candidat public retrouvé par question');
+  quizSource.hidden = true;
   const state = node('p', 'state');
   state.setAttribute('role', 'status');
   const question = node('p', 'question');
@@ -265,7 +280,7 @@ function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, initialA
   answers.setAttribute('aria-label', 'Réponses du corrigé');
   const message = node('p', 'message');
   message.setAttribute('aria-live', 'polite');
-  body.append(quizLabel, state, question, answers, message);
+  body.append(quizLabel, quizSource, state, question, answers, message);
   const controls = node('div', 'controls');
   const autoLabel = node('label');
   const auto = document.createElement('input');
@@ -285,6 +300,7 @@ function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, initialA
   document.documentElement.append(host);
 
   let currentQuiz = quiz;
+  let currentQuizSource = '';
   let discoveryMessage = 'Recherche du quiz…';
   let revealedAnswer = null;
   let lastMetadataRefresh = -Infinity;
@@ -356,6 +372,7 @@ function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, initialA
       autoState.textContent = auto.checked ? (document.hidden ? 'Auto-clic en pause' : 'Auto-clic activé') : 'Auto-clic désactivé';
       subtitle.textContent = decision.status === 'revealed' ? 'Correction après la question' : attemptedRound ? 'Une tentative pour cette question' : 'Question en direct';
     }
+    quizSource.hidden = currentQuizSource !== 'public-search' || !hasQuiz(currentQuiz) || decision.status === 'revealed';
     answerOnce.disabled = decision.status !== 'ready' || attemptedRound || document.hidden;
   }
   function refresh() {
@@ -457,9 +474,15 @@ function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, initialA
     host, dispose, refresh,
     setQuiz(nextQuiz) {
       if (disposed) return;
+      if (!hasQuiz(nextQuiz) || nextQuiz?.id !== currentQuiz?.id) currentQuizSource = '';
       currentQuiz = nextQuiz;
       quizLabel.textContent = hasQuiz(nextQuiz) ? nextQuiz.title || 'Quiz chargé' : 'Recherche du quiz…';
       refresh();
+    },
+    setQuizSource(value) {
+      if (disposed) return;
+      currentQuizSource = value === 'public-search' ? value : '';
+      quizSource.hidden = currentQuizSource !== 'public-search' || !hasQuiz(currentQuiz) || latest.decision.status === 'revealed';
     },
     setDiscoveryStatus(value) {
       if (disposed) return;
@@ -518,11 +541,28 @@ const readPage = () => ((() => {
   };
   const validText = (value, explicit = false) => value.length >= (explicit ? 2 : 8) && value.length <= 1200 &&
     (explicit ? /[\p{L}\p{N}]/u.test(value) : /\p{L}/u.test(value)) &&
-    !/^(kahoot!?|game pin\b|pin\s*:|waiting\b|loading\b|you.re in\b|get ready\b|ready to join\b|en attente\b|chargement\b|classement\s*$|r[ée]sultats\s*$|c.est parti\s*!?\s*$|question\s+\d+\s*(of\s+\d+)?\s*$)/i.test(value);
+    !/^(kahoot!?|game pin\b|pin\s*:|waiting\b|loading\b|you.re in\b|get ready\b|ready to join\b|en attente\b|chargement\b|classement\s*$|r[ée]sultats\s*$|c.est parti\s*!?\s*$|question\s+\d+\s*((?:of|sur)\s+\d+)?\s*$)/i.test(value);
   const selectors = ['[data-functional-selector="question-title"]', '[data-functional-selector="question-text"]', '[data-functional-selector="question"]', '[data-testid="question-title"]', '.question-title', '.question-text'];
   const resultPage = /\/(?:result|results|podium|ranking|scoreboard|lobby|join)(?:\/|$)/i.test(location.pathname);
   const roundElement = document.querySelector('[data-functional-selector="question-index-counter"]');
-  const roundId = roundElement && visible(roundElement) ? text(roundElement) : '';
+  let roundId = roundElement && visible(roundElement) ? text(roundElement) : '';
+  if (!roundId) {
+    const counters = new Map();
+    let scanned = 0;
+    for (const span of document.querySelectorAll('span')) {
+      if (scanned++ >= 500) break;
+      if (!visible(span)) continue;
+      const value = text(span);
+      const match = value.match(/^question\s+([1-9]\d{0,4})\s+(?:sur|of)\s+([1-9]\d{0,4})$/i);
+      if (!match) continue;
+      const current = Number(match[1]);
+      const total = Number(match[2]);
+      if (current > total || total > 10000) continue;
+      counters.set(`${current}/${total}`, value);
+      if (counters.size > 1) break;
+    }
+    if (counters.size === 1) roundId = [...counters.values()][0];
+  }
   let question = '';
   let method = 'none';
   for (const selector of resultPage ? [] : selectors) {
@@ -531,7 +571,7 @@ const readPage = () => ((() => {
   }
   if (!question && !resultPage) {
     const found = [...document.querySelectorAll('main h1, main h2, [role="main"] h1, [role="main"] h2, h1, h2')]
-      .find(element => visible(element) && !element.closest('nav,header,footer') && validText(text(element)));
+      .find(element => visible(element) && !element.closest('nav,footer') && validText(text(element)));
     if (found) { question = text(found); method = 'heading'; }
   }
   const choices = [];
@@ -578,6 +618,15 @@ const readPage = () => ((() => {
     roundId, phase, canAnswer: phase === 'question' && choices.some(choice => !choice.disabled) };
 })());
 
+const knownQuizMatchesCapture = (loaded,capture) => {
+  const text=typeof capture?.question==='string' ? normalizeText(capture.question) : '';
+  if (!text || !Array.isArray(loaded?.questions) || !Array.isArray(capture?.choices) || capture.choices.length<2 || capture.choices.length>20) return false;
+  const exact=loaded.questions.filter(question=>typeof question?.question==='string' && normalizeText(question.question)===text);
+  if (exact.length!==1 || !Array.isArray(exact[0].choices) || exact[0].choices.length!==capture.choices.length) return false;
+  const source=exact[0].choices.map(choice=>typeof choice?.text==='string' ? normalizeText(choice.text) : '').sort();
+  const visible=capture.choices.map(choice=>typeof choice?.text==='string' ? normalizeText(choice.text) : '').sort();
+  return source.every((choice,index)=>choice && choice===visible[index]);
+};
 globalThis.__ezKahootStart = quiz => {
   if (location.protocol !== 'https:' || !['kahoot.it','create.kahoot.it','play.kahoot.it'].includes(location.hostname)) return {ok:false};
   let panel;
@@ -588,12 +637,12 @@ globalThis.__ezKahootStart = quiz => {
     return verifying && decision.status==='ready' ? {...decision,status:'waiting',targetIndexes:[],message:'Vérification de la partie…'} : decision;
   },
     activateAnswer:(capture,index)=>activateAnswer(capture,index,readPage),
-    onRefresh:async ({quiz:loaded})=>{
+    onRefresh:async ({quiz:loaded,capture})=>{
       if (disposed || !panel?.host.isConnected) return;
       verifying = true;
       panel.refresh();
       try {
-        const response = await chrome.runtime.sendMessage({type:'EZK_DISCOVER',knownQuizId:loaded?.id||''});
+        const response = await chrome.runtime.sendMessage({type:'EZK_DISCOVER',knownQuizId:loaded?.id||'',knownQuizMatchesObserved:knownQuizMatchesCapture(loaded,capture)});
         if (disposed || !panel.host.isConnected) return;
         panel.setRevealedAnswer(response?.metadata?.revealedAnswer || null);
         const detected=response?.metadata?.quizId;
@@ -607,8 +656,12 @@ globalThis.__ezKahootStart = quiz => {
           panel.setDiscoveryStatus('Le corrigé chargé ne correspond pas au nombre de questions de cette partie.');
           return;
         }
-        if (response.quiz) panel.setQuiz(response.quiz);
-        if (!next) panel.setDiscoveryStatus(metadata.quizId ? 'Chargement du corrigé…' : 'Cette page n’a pas transmis l’identifiant ni le corrigé du quiz.');
+        if (response.quiz) {
+          panel.setQuiz(response.quiz);
+          panel.setQuizSource(response.source==='public-search' ? 'public-search' : '');
+        } else if (next && response.source==='public-search' && response.searchStatus==='matched') panel.setQuizSource('public-search');
+        if (response.discoveryMessage) panel.setDiscoveryStatus(response.discoveryMessage);
+        else if (!next) panel.setDiscoveryStatus(metadata.quizId ? 'Chargement du corrigé…' : metadata.observedQuestion ? 'Recherche du quiz public à partir de la question reçue…' : 'Cette page n’a pas transmis l’identifiant ni le corrigé du quiz.');
       } catch { panel.setDiscoveryStatus('Rouvre le panneau depuis l’extension à jour.'); }
       finally { verifying=false; if (!disposed && panel.host.isConnected) panel.refresh(); }
     }

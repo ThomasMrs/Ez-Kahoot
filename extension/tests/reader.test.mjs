@@ -13,7 +13,10 @@ function element(value, options = {}) {
     getAttribute: name => options.attributes?.[name] ?? null,
     hasAttribute: name => Object.hasOwn(options.attributes || {}, name),
     closest(selector) {
-      if (selector !== '[aria-hidden="true"]') return null;
+      if (selector !== '[aria-hidden="true"]') {
+        for (let current = this; current; current = current.parentElement) if (selector.split(',').includes(current.tagName.toLowerCase())) return current;
+        return null;
+      }
       for (let current = this; current; current = current.parentElement) if (current.getAttribute('aria-hidden') === 'true') return current;
       return null;
     },
@@ -22,13 +25,15 @@ function element(value, options = {}) {
   if (options.checkVisibility !== undefined) node.checkVisibility = () => options.checkVisibility;
   return node;
 }
-function capture(questions, choices = [], url = 'https://kahoot.it/v2/gameblock') {
+function capture(questions, choices = [], url = 'https://kahoot.it/v2/gameblock', options = {}) {
   const document = {
     title: 'Fixture de lecture',
-    querySelector: () => null,
+    querySelector: selector => selector === '[data-functional-selector="question-index-counter"]' ? options.roundElement || null : null,
     querySelectorAll: selector => {
       if (selector === '[data-functional-selector="question-title"]') return questions;
       if (selector === 'button[data-functional-selector^="answer-"]') return choices;
+      if (selector === 'span') return options.spans || [];
+      if (selector === 'main h1, main h2, [role="main"] h1, [role="main"] h2, h1, h2') return options.headings || [];
       return [];
     }
   };
@@ -64,4 +69,31 @@ assert.equal(resultCapture.canAnswer, false);
 assert.equal(resultCapture.phase, 'result');
 assert.equal(capture([element('Question visible ?')]).phase, 'question');
 assert.equal(capture([element('Question visible ?')]).canAnswer, false);
+const questionInHeader = element('Une question dans son en-tête ?', { tagName: 'H1', parent: element('', { tagName: 'HEADER' }) });
+assert.equal(capture([], [element('Oui'), element('Non')], undefined, { headings: [questionInHeader] }).question, 'Une question dans son en-tête ?');
+assert.equal(capture([], [element('Oui'), element('Non')], undefined, { headings: [questionInHeader] }).canAnswer, true);
+const navigationHeading = element('Une rubrique de navigation', { parent: element('', { tagName: 'NAV' }) });
+assert.equal(capture([], [], undefined, { headings: [navigationHeading] }).question, '');
+const roundCapture = (spans, options = {}) => capture([], [], 'https://kahoot.it/answer/result', { spans, ...options });
+assert.equal(roundCapture([element('Question 4 sur 16', { tagName: 'SPAN' })]).roundId, 'Question 4 sur 16');
+assert.equal(roundCapture([element('Question 4 of 16', { tagName: 'SPAN' })]).roundId, 'Question 4 of 16');
+assert.equal(roundCapture([element('Question\u00a04\u00a0sur\u00a016', { tagName: 'SPAN' })]).roundId, 'Question 4 sur 16');
+assert.equal(roundCapture([element('Question 10000 sur 10000', { tagName: 'SPAN' })]).roundId, 'Question 10000 sur 10000');
+assert.equal(roundCapture([element('Question 4 sur 16'), element('Question 4 sur 16')]).roundId, 'Question 4 sur 16', 'duplicate copies of one counter are a unique value');
+assert.equal(roundCapture([element('Question 4 sur 16'), element('Question 5 sur 16')]).roundId, '', 'different visible counters are ambiguous');
+for (const span of [
+  element('Question 3 sur 16', { hidden: true }),
+  element('Question 3 sur 16', { parent: element('', { style: { opacity: '0' } }) }),
+  element('Question 3 sur 16', { noRects: true })
+]) {
+  assert.equal(roundCapture([span, element('Question 4 sur 16')]).roundId, 'Question 4 sur 16', 'hidden counters are ignored');
+}
+for (const label of ['Question 0 sur 16', 'Question 17 sur 16', 'Question 16 sur 10001', 'Question 10001 sur 10001', 'Question 4 sur 16 ensuite', '4 sur 16', 'Question 4', 'Question 4/16']) {
+  assert.equal(roundCapture([element(label)]).roundId, '', `invalid fallback counter ignored: ${label}`);
+}
+assert.equal(roundCapture([element('Question 4 sur 16')], { roundElement: element('3') }).roundId, '3', 'explicit selector has priority over the span fallback');
+assert.equal(roundCapture([element('Question 4 sur 16')], { roundElement: element('3', { hidden: true }) }).roundId, 'Question 4 sur 16');
+assert.equal(roundCapture([...Array.from({ length: 500 }, () => element('Autre texte')), element('Question 4 sur 16')]).roundId, '', 'span fallback is bounded');
+assert.equal(capture([element('Question 4 sur 16'), element('Quelle est la bonne réponse ?')]).question, 'Quelle est la bonne réponse ?', 'French counters are not read as question text');
+assert.equal(capture([], [], 'https://kahoot.it/answer', { headings: [element('Question 4 sur 16'), element('Quelle est la bonne réponse ?')] }).question, 'Quelle est la bonne réponse ?');
 console.log('PASS: lecteur DOM simulé, texte mathématique, exposants et indices HTML, visibilité des ancêtres, doublons distincts, formes seules, URL publique.');

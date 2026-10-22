@@ -15,7 +15,7 @@ export async function buildConsoleScript(quiz) {
     if (/^\s*(?:import|export)\s/m.test(result)) throw new Error('Le compagnon doit être mis à jour.');
     return result;
   };
-  return `/* Ez-Kahoot 1.3 · thomas marsa
+  return `/* Ez-Kahoot 1.4 · thomas marsa
  * Corrigé embarqué, aucun appel réseau et aucun code de connexion.
  * Auto-clic facultatif : question exacte et choix visibles vérifiés.
  * Fermer le panneau arrête toute lecture et tout clic.

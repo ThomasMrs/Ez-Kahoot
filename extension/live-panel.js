@@ -25,6 +25,7 @@ export function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, i
     .header-copy{flex:1;min-width:0}.icon-button{display:grid;place-items:center;flex:none;width:30px;height:30px;border:1px solid #9470c2;border-radius:6px;background:transparent;color:#fff;font-size:19px;line-height:1}
     .icon-button:hover{background:#25076b}.body{padding:13px 14px;max-height:min(520px,calc(100vh - 140px));overflow:auto}
     .quiz{font-size:10px;color:#645675;margin:0 0 10px;overflow-wrap:anywhere}.state{display:inline-flex;gap:6px;align-items:center;font-size:10px;font-weight:700;color:#645675;margin:0 0 9px}
+    .quiz-source{display:block;font-size:10px;color:#645675;margin:-5px 0 10px;overflow-wrap:anywhere}
     .state::before{content:'';width:6px;height:6px;flex:none;border-radius:50%;background:#8c77a4}.state[data-state=ready],.state[data-state=revealed]{color:#1f650a}.state[data-state=ready]::before,.state[data-state=revealed]::before{background:#36851f}
     .state[data-state=ambiguous],.state[data-state=unmapped],.state[data-state=unsupported]{color:#7a4200}.state[data-state=error]{color:#9f1332}
     .question{font-size:11px;font-weight:600;line-height:1.55;margin:0 0 10px;overflow-wrap:anywhere}.answers{display:grid;gap:6px;list-style:none;padding:0;margin:0}
@@ -64,6 +65,8 @@ export function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, i
   header.append(logo, headerCopy, reduce, close);
   const body = node('div', 'body');
   const quizLabel = node('p', 'quiz', hasQuiz(quiz) ? quiz.title || 'Quiz chargé' : 'Recherche du quiz…');
+  const quizSource = node('span', 'quiz-source', 'Candidat public retrouvé par question');
+  quizSource.hidden = true;
   const state = node('p', 'state');
   state.setAttribute('role', 'status');
   const question = node('p', 'question');
@@ -71,7 +74,7 @@ export function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, i
   answers.setAttribute('aria-label', 'Réponses du corrigé');
   const message = node('p', 'message');
   message.setAttribute('aria-live', 'polite');
-  body.append(quizLabel, state, question, answers, message);
+  body.append(quizLabel, quizSource, state, question, answers, message);
   const controls = node('div', 'controls');
   const autoLabel = node('label');
   const auto = document.createElement('input');
@@ -91,6 +94,7 @@ export function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, i
   document.documentElement.append(host);
 
   let currentQuiz = quiz;
+  let currentQuizSource = '';
   let discoveryMessage = 'Recherche du quiz…';
   let revealedAnswer = null;
   let lastMetadataRefresh = -Infinity;
@@ -162,6 +166,7 @@ export function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, i
       autoState.textContent = auto.checked ? (document.hidden ? 'Auto-clic en pause' : 'Auto-clic activé') : 'Auto-clic désactivé';
       subtitle.textContent = decision.status === 'revealed' ? 'Correction après la question' : attemptedRound ? 'Une tentative pour cette question' : 'Question en direct';
     }
+    quizSource.hidden = currentQuizSource !== 'public-search' || !hasQuiz(currentQuiz) || decision.status === 'revealed';
     answerOnce.disabled = decision.status !== 'ready' || attemptedRound || document.hidden;
   }
   function refresh() {
@@ -263,9 +268,15 @@ export function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, i
     host, dispose, refresh,
     setQuiz(nextQuiz) {
       if (disposed) return;
+      if (!hasQuiz(nextQuiz) || nextQuiz?.id !== currentQuiz?.id) currentQuizSource = '';
       currentQuiz = nextQuiz;
       quizLabel.textContent = hasQuiz(nextQuiz) ? nextQuiz.title || 'Quiz chargé' : 'Recherche du quiz…';
       refresh();
+    },
+    setQuizSource(value) {
+      if (disposed) return;
+      currentQuizSource = value === 'public-search' ? value : '';
+      quizSource.hidden = currentQuizSource !== 'public-search' || !hasQuiz(currentQuiz) || latest.decision.status === 'revealed';
     },
     setDiscoveryStatus(value) {
       if (disposed) return;

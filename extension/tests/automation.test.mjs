@@ -20,6 +20,72 @@ test('identifies the visible button by its text after answer shuffling', () => {
   assert.equal(decision.question.id, 'q-1');
 });
 
+test('maps complete English and French boolean pairs in either direction', () => {
+  for (const [sourceTexts, visibleTexts] of [
+    [['True', 'False'], ['Faux', 'Vrai']],
+    [['Vrai', 'Faux'], ['False', 'True']],
+    [[' true ', 'FALSE'], [' FAUX ', 'VRAI']],
+    [['True', 'Faux'], ['False', 'Vrai']],
+    [['Vrai', 'False'], ['Faux', 'True']]
+  ]) {
+    for (const correctIndex of [0, 1]) {
+      const question = makeQuestion('La caractéristique est-elle avantageuse ?', sourceTexts.map((text, index) => ({ text, correct: index === correctIndex })));
+      const capture = makeCapture(question.question, visibleTexts.map((text, index) => ({ text, index })));
+      const decision = decideAnswer(makeQuiz(question), capture);
+      assert.equal(decision.status, 'ready');
+      assert.deepEqual(decision.targetIndexes, [correctIndex === 0 ? 1 : 0]);
+      assert.equal(decision.answers[0].text, sourceTexts[correctIndex], 'displayed correction retains its source text');
+    }
+  }
+});
+
+test('boolean locale mapping preserves captured indexes and stable round signatures', () => {
+  const question = makeQuestion('Est-ce vrai ?', [{ text: 'Vrai', correct: false }, { text: 'Faux', correct: true }]);
+  const capture = makeCapture(question.question, [{ text: 'False', index: 1 }, { text: 'True', index: 0 }]);
+  assert.deepEqual(decideAnswer(makeQuiz(question), capture).targetIndexes, [1], 'capture index is used rather than array order');
+  const french = makeCapture(question.question, [{ text: 'Vrai', index: 0 }, { text: 'Faux', index: 1 }]);
+  assert.equal(decideAnswer(makeQuiz(question), capture).signature, decideAnswer(makeQuiz(question), french).signature);
+});
+
+test('does not translate incomplete pairs, longer phrases or generic yes/no labels', () => {
+  const questionText = 'La caractéristique est-elle avantageuse ?';
+  for (const [sourceTexts, visibleTexts] of [
+    [['True', 'False'], ['Vrai', 'Vrai']],
+    [['True', 'False'], ['Vrai', 'True']],
+    [['True', 'False'], ['Vrai']],
+    [['True', 'False'], ['Vrai', 'Faux', 'Autre']],
+    [['True', 'False'], ['Vraiment', 'Faux']],
+    [['True', 'False'], ['Vrai ou faux', 'Faux']],
+    [['True', 'False'], ['Vrai?', 'Faux!']],
+    [['True', 'False'], ['Yes', 'No']],
+    [['Vrai', 'Faux'], ['Oui', 'Non']],
+    [['Yes', 'No'], ['Vrai', 'Faux']],
+    [['True', 'Maybe'], ['Vrai', 'Faux']],
+    [['True', 'Vrai'], ['Vrai', 'Faux']],
+    [['True', 'False', 'Other'], ['Vrai', 'Faux', 'Other']]
+  ]) {
+    const question = makeQuestion(questionText, sourceTexts.map((text, index) => ({ text, correct: index === 0 })));
+    const decision = decideAnswer(makeQuiz(question), makeCapture(questionText, visibleTexts.map((text, index) => ({ text, index }))));
+    assert.notEqual(decision.status, 'ready', `${sourceTexts.join('/')} cannot map to ${visibleTexts.join('/')}`);
+    assert.deepEqual(decision.targetIndexes, []);
+  }
+});
+
+test('boolean aliases do not translate the question or relax correction safeguards', () => {
+  const question = makeQuestion('Cette proposition est true ?', [{ text: 'True', correct: true }, { text: 'False', correct: false }]);
+  const capture = makeCapture(question.question, [{ text: 'Vrai', index: 0 }, { text: 'Faux', index: 1 }]);
+  assert.equal(decideAnswer(makeQuiz(question), { ...capture, question: 'Cette proposition est vrai ?' }).status, 'unknown');
+  const unknown = structuredClone(question); unknown.choices[1].correct = null;
+  assert.equal(decideAnswer(makeQuiz(unknown), capture).status, 'unknown');
+  const multiple = structuredClone(question); multiple.choices[1].correct = true;
+  assert.equal(decideAnswer(makeQuiz(multiple), capture).status, 'unsupported');
+  assert.equal(decideAnswer({ questions: [question, structuredClone(question)] }, capture).status, 'ambiguous');
+  const duplicateIndexes = structuredClone(capture); duplicateIndexes.choices[1].index = 0;
+  assert.equal(decideAnswer(makeQuiz(question), duplicateIndexes).status, 'ambiguous');
+  const disabled = structuredClone(capture); disabled.choices[0].disabled = true;
+  assert.equal(decideAnswer(makeQuiz(question), disabled).status, 'waiting');
+});
+
 test('keeps a stable signature across choice reorderings', () => {
   const first = decideAnswer(makeQuiz(), makeCapture());
   const reordered = decideAnswer(makeQuiz(), makeCapture(undefined, [

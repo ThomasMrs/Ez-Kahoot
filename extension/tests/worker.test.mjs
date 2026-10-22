@@ -205,3 +205,244 @@ test('worker does not cache failed fetches or invalid quiz documents', async () 
   assert.equal((await discoverForTab({}, sender)).ok, true);
   assert.equal(requests.length, 2);
 });
+
+const observed = {
+  question: 'Quelle caractéristique décrit une population ?',
+  choices: ['Sa taille', 'Sa couleur', 'Sa vitesse', 'Sa masse'], roundId: '4'
+};
+const recoveredId = '10000000-0000-4000-8000-000000000004';
+const recovered = {
+  id: recoveredId, title: 'Quiz public retrouvé', questions: [
+    { question: observed.question, choices: observed.choices.map((text, index) => ({ text, correct: index === 0 })) },
+    { question: 'Une autre question ?', choices: [{ text: 'Oui', correct: true }, { text: 'Non', correct: false }] }
+  ], slideCount: 0, skippedCount: 0
+};
+function prepareSearch() {
+  reset();
+  metadata = { quizId: null, title: '', questionCount: 2, observedQuestion: structuredClone(observed) };
+  body = { quiz: structuredClone(recovered), source: 'public-search' };
+}
+
+test('worker accepts player observations only on exact player routes and strips extra data', async () => {
+  prepareSearch();
+  metadata.observedQuestion.token = token;
+  metadata.observedQuestion.roundId = '1234567890123';
+  metadata.observedQuestion.question = `  ${observed.question}  `;
+  metadata.observedQuestion.choices = observed.choices.map(choice => ` ${choice} `);
+  for (const path of ['/gameblock', '/v2/gameblock', '/answer/result', '/answer/results/']) {
+    const result = await discoverForTab({}, { tab: { ...sender.tab, url: `https://kahoot.it${path}` } });
+    assert.deepEqual(result.metadata.observedQuestion, { ...observed, roundId: '1234567890' });
+    assert.ok(!JSON.stringify(result).includes(token));
+  }
+  for (const path of ['/gameblock/other', '/answer', '/answer/question', '/lobby', '/v2/gameblock-extra']) {
+    const result = await discoverForTab({}, { tab: { ...sender.tab, url: `https://kahoot.it${path}` } });
+    assert.ok(!Object.hasOwn(result.metadata, 'observedQuestion'));
+    assert.equal(result.quiz, null);
+  }
+  assert.equal(requests.length, 1);
+});
+
+test('worker ignores absent or malformed observations without reading the connection or searching', async () => {
+  for (const changes of [
+    { question: '' }, { question: ' ' }, { question: null }, { question: 'x'.repeat(1201) },
+    { roundId: 4 }, { roundId: ' ' }, { choices: [] }, { choices: ['Only'] },
+    { choices: ['Oui', null] }, { choices: ['Oui', ' '] }, { choices: ['Oui', 'x'.repeat(2001)] },
+    { choices: Array.from({ length: 21 }, () => 'Oui') }
+  ]) {
+    prepareSearch(); metadata.observedQuestion = { ...observed, ...changes };
+    const result = await discoverForTab({}, sender);
+    assert.equal(result.ok, true);
+    assert.equal(result.quiz, null);
+    assert.ok(!Object.hasOwn(result.metadata, 'observedQuestion'));
+    assert.equal(storageReads, 0);
+    assert.equal(requests.length, 0);
+  }
+  prepareSearch(); delete metadata.observedQuestion;
+  assert.equal((await discoverForTab({}, sender)).quiz, null);
+  assert.equal(requests.length, 0);
+});
+
+test('worker searches through the authenticated bridge with bounded player text and explicit provenance', async () => {
+  prepareSearch(); metadata.observedQuestion.choices.reverse();
+  const result = await discoverForTab({ knownQuizId: quizId }, sender);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.quiz, recovered);
+  assert.equal(result.source, 'public-search');
+  assert.equal(result.searchStatus, 'matched');
+  assert.equal(result.metadata.quizId, null);
+  assert.equal(requests[0].url, 'http://127.0.0.1:8765/bridge/search-quiz');
+  const options = requests[0].options;
+  assert.equal(options.method, 'POST');
+  assert.equal(options.headers.Authorization, `Bearer ${token}`);
+  assert.equal(options.headers['Content-Type'], 'application/json');
+  assert.equal(options.credentials, 'omit');
+  assert.equal(options.cache, 'no-store');
+  assert.deepEqual(JSON.parse(options.body), { question: observed.question, choices: [...observed.choices].reverse(), questionCount: 2 });
+  assert.ok(!JSON.stringify(result).includes(token));
+  prepareSearch(); metadata.questionCount = null;
+  await discoverForTab({}, sender);
+  assert.ok(!Object.hasOwn(JSON.parse(requests[0].options.body), 'questionCount'));
+});
+
+test('worker keeps UUID discovery first and skips search only for an exact known-quiz hint', async () => {
+  prepareSearch(); metadata.quizId = quizId; body = quiz;
+  assert.deepEqual((await discoverForTab({}, sender)).quiz, quiz);
+  assert.ok(requests[0].url.includes('/bridge/quiz?input='));
+  prepareSearch();
+  const result = await discoverForTab({ knownQuizId: recoveredId, knownQuizMatchesObserved: true }, sender);
+  assert.equal(result.quiz, null);
+  assert.equal(storageReads, 0);
+  assert.equal(requests.length, 0);
+  await discoverForTab({ knownQuizId: recoveredId }, sender);
+  assert.equal(requests.length, 1);
+});
+
+test('worker caches exact search success for 60 seconds and shares an in-flight search', async () => {
+  prepareSearch();
+  const results = await Promise.all([discoverForTab({}, sender), discoverForTab({}, sender)]);
+  assert.deepEqual(results[0].quiz, recovered);
+  assert.deepEqual(results[1].quiz, recovered);
+  assert.equal(requests.length, 1);
+  clock += 59_999;
+  metadata.observedQuestion.roundId = '5';
+  assert.equal((await discoverForTab({}, sender)).metadata.observedQuestion.roundId, '5');
+  assert.equal(requests.length, 1);
+  clock += 1;
+  await discoverForTab({}, sender);
+  assert.equal(requests.length, 2);
+});
+
+test('worker reuses a recovered quiz for later exact observations but searches on a contradiction', async () => {
+  prepareSearch(); await discoverForTab({}, sender);
+  metadata.observedQuestion = { question: recovered.questions[1].question, choices: ['Non', 'Oui'], roundId: '5' };
+  const next = await discoverForTab({ knownQuizId: recoveredId }, sender);
+  assert.equal(next.ok, true);
+  assert.equal(next.quiz, null);
+  assert.equal(next.source, 'public-search');
+  assert.equal(requests.length, 1);
+  metadata.observedQuestion.choices = ['Peut-être', 'Oui']; status = 404;
+  const conflict = await discoverForTab({ knownQuizId: recoveredId }, sender);
+  assert.equal(conflict.quiz, null);
+  assert.equal(conflict.searchStatus, 'not-found');
+  assert.equal(requests.length, 2);
+  metadata.observedQuestion.choices = ['Non', 'Oui']; metadata.questionCount = 3;
+  await discoverForTab({ knownQuizId: recoveredId }, sender);
+  assert.equal(requests.length, 3);
+});
+
+test('worker confirms complete localized boolean choices without accepting longer phrases', async () => {
+  prepareSearch();
+  body.quiz.questions[1].choices = [{ text: 'True', correct: true }, { text: 'False', correct: false }];
+  await discoverForTab({}, sender);
+  metadata.observedQuestion = { question: recovered.questions[1].question, choices: ['Faux', 'Vrai'], roundId: '5' };
+  const result = await discoverForTab({ knownQuizId: recoveredId }, sender);
+  assert.equal(result.ok, true);
+  assert.equal(result.quiz, null);
+  assert.equal(requests.length, 1);
+  metadata.observedQuestion.choices = ['Faux', 'Vrai parfois']; status = 404;
+  assert.equal((await discoverForTab({ knownQuizId: recoveredId }, sender)).searchStatus, 'not-found');
+  assert.equal(requests.length, 2);
+});
+
+test('worker retries missing and ambiguous public matches only after ten seconds', async () => {
+  for (const [code, expected] of [[404, 'not-found'], [409, 'ambiguous']]) {
+    prepareSearch(); status = code; body = { error: token };
+    const first = await discoverForTab({}, sender);
+    assert.equal(first.ok, true);
+    assert.equal(first.quiz, null);
+    assert.equal(first.searchStatus, expected);
+    assert.equal(first.source, 'public-search');
+    assert.ok(!JSON.stringify(first).includes(token));
+    clock += 9_999;
+    await discoverForTab({}, sender);
+    assert.equal(requests.length, 1);
+    clock += 1; status = 200; body = { quiz: recovered, source: 'public-search' };
+    assert.deepEqual((await discoverForTab({}, sender)).quiz, recovered);
+    assert.equal(requests.length, 2);
+  }
+});
+
+test('worker preserves observations on search auth errors and throttles network failures', async () => {
+  for (const code of [401, 403, 500]) {
+    prepareSearch(); status = code; body = { error: token };
+    const result = await discoverForTab({}, sender);
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.metadata.observedQuestion, observed);
+    assert.ok(!JSON.stringify(result).includes(token));
+    await discoverForTab({}, sender);
+    assert.equal(requests.length, 1);
+  }
+  prepareSearch(); stored.baseUrl = 'https://evil.test';
+  assert.equal((await discoverForTab({}, sender)).ok, false);
+  assert.equal(requests.length, 0);
+  prepareSearch(); networkError = true;
+  assert.equal((await discoverForTab({}, sender)).ok, false);
+  networkError = false;
+  assert.equal((await discoverForTab({}, sender)).ok, false);
+  assert.equal(requests.length, 1);
+  clock += 10_000;
+  assert.equal((await discoverForTab({}, sender)).ok, true);
+  assert.equal(requests.length, 2);
+});
+
+test('worker rejects search candidates with contradictory text, choices, count, or corrections', async () => {
+  for (const change of [
+    candidate => { candidate.questions[0].question += ' Autre'; },
+    candidate => { candidate.questions[0].choices[0].text = 'Autre proposition'; },
+    candidate => { candidate.questions[0].choices.pop(); },
+    candidate => { candidate.questions[0].choices[0].correct = null; },
+    candidate => { candidate.questions[0].choices.forEach(choice => { choice.correct = false; }); },
+    candidate => { candidate.questions.push(structuredClone(candidate.questions[0])); },
+    candidate => { candidate.skippedCount = 1; },
+    candidate => { candidate.id = 'not-an-uuid'; }
+  ]) {
+    prepareSearch(); change(body.quiz);
+    const result = await discoverForTab({}, sender);
+    assert.equal(result.ok, true);
+    assert.equal(result.quiz, null);
+    assert.equal(result.searchStatus, 'ambiguous');
+    await discoverForTab({}, sender);
+    assert.equal(requests.length, 1);
+  }
+  prepareSearch(); body.source = 'unknown';
+  assert.equal((await discoverForTab({}, sender)).quiz, null);
+  prepareSearch();
+  metadata.observedQuestion.choices = ['Identique', 'Identique']; metadata.questionCount = 1;
+  body.quiz.questions = [{ question: observed.question, choices: [{ text: 'Identique', correct: true }, { text: 'Identique', correct: false }] }];
+  assert.equal((await discoverForTab({}, sender)).quiz, null);
+});
+
+test('worker separates public-search cache by tab, connection, question, choices and count', async () => {
+  prepareSearch(); status = 404;
+  await discoverForTab({}, sender);
+  await discoverForTab({}, { tab: { ...sender.tab, id: 43 } });
+  stored.token = 'second_token_12345678901234567890';
+  await discoverForTab({}, sender);
+  stored.baseUrl = 'http://127.0.0.1:8766';
+  await discoverForTab({}, sender);
+  metadata.observedQuestion.question += ' Autre';
+  await discoverForTab({}, sender);
+  metadata.observedQuestion.choices = ['Choix A', 'Choix B'];
+  await discoverForTab({}, sender);
+  metadata.questionCount = 3;
+  await discoverForTab({}, sender);
+  assert.equal(requests.length, 7);
+});
+
+test('worker public-search cache keeps at most 64 recent signatures', async () => {
+  prepareSearch(); status = 404;
+  const question = number => `${observed.question} ${number}`;
+  for (let index = 1; index <= 64; index++) {
+    metadata.observedQuestion.question = question(index);
+    await discoverForTab({}, sender);
+  }
+  assert.equal(requests.length, 64);
+  metadata.observedQuestion.question = question(1);
+  await discoverForTab({}, sender);
+  assert.equal(requests.length, 64);
+  metadata.observedQuestion.question = question(65);
+  await discoverForTab({}, sender);
+  metadata.observedQuestion.question = question(2);
+  await discoverForTab({}, sender);
+  assert.equal(requests.length, 66);
+});

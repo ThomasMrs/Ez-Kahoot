@@ -3,8 +3,15 @@ export function discoverQuizMetadata() {
   const sources = ['public-url', 'json-script', 'game-session', 'react-store'];
   const records = [];
   const revelations = [];
+  const observations = [];
   let isResultPage = false;
+  let isObservedQuestionPage = false;
   try { isResultPage = /^(?:\/answer)?\/results?\/?$/i.test(new URL(location.href).pathname); } catch { /* No result is exposed outside a recognized result route. */ }
+  try {
+    const page = new URL(location.href);
+    isObservedQuestionPage = page.protocol === 'https:' && ['kahoot.it', 'www.kahoot.it', 'create.kahoot.it', 'play.kahoot.it'].includes(page.hostname) &&
+      /^(?:(?:\/v2)?\/gameblock|\/answer\/results?)\/?$/i.test(page.pathname);
+  } catch { /* Only recognized player question/result routes expose received question text. */ }
   const limits = { nodes: 3000, depth: 8, jsonLength: 2 * 1024 * 1024 };
   const sensitive = /cookie|session|token|participant|user|services|tracking|credential|password|secret|authorization|authentication|^auth$|oauth|bearer|apikey|privatekey|accesskey|csrf|email|phone|fingerprint|device|clientid/i;
   const keyName = value => String(value).replace(/[^a-z0-9]/gi, '').toLowerCase();
@@ -25,6 +32,29 @@ export function discoverQuizMetadata() {
     const number = typeof value === 'number' ? value : typeof value === 'string' && /^\d{1,5}$/.test(value) ? Number(value) : NaN;
     if (Number.isInteger(number) && number > 0 && number <= 10000) records.push({ questionCount: number, source });
   };
+  // Decode quiz markup as text only: no DOM parsing, resource load or script execution.
+  const plainQuizText = value => {
+    if (typeof value !== 'string') return '';
+    const entities = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+      ndash: '–', mdash: '—', hellip: '…', laquo: '«', raquo: '»', lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”',
+      times: '×', divide: '÷', minus: '−', le: '≤', leq: '≤', ge: '≥', geq: '≥', ne: '≠', deg: '°', sup1: '¹', sup2: '²', sup3: '³',
+      eacute: 'é', egrave: 'è', ecirc: 'ê', agrave: 'à', acirc: 'â', ccedil: 'ç', ugrave: 'ù', ucirc: 'û', ocirc: 'ô', icirc: 'î', iuml: 'ï', oelig: 'œ',
+      Eacute: 'É', Egrave: 'È', Ecirc: 'Ê', Agrave: 'À', Acirc: 'Â', Ccedil: 'Ç', Ugrave: 'Ù', Ucirc: 'Û', Ocirc: 'Ô', Icirc: 'Î', Iuml: 'Ï', OElig: 'Œ' };
+    return value.slice(0, 20_000)
+      .replace(/<!--(?:[\s\S]*?-->|[\s\S]*$)/g, '')
+      .replace(/<(script|style|template|noscript)(?=[\s/>])(?:"[^"]*"|'[^']*'|[^'">])*>[\s\S]*?(?:<\/\1\s*>|$)/gi, '')
+      .replace(/<sup(?=[\s/>])(?:"[^"]*"|'[^']*'|[^'">])*?>([\s\S]*?)<\/sup\s*>/gi, '^($1)')
+      .replace(/<sub(?=[\s/>])(?:"[^"]*"|'[^']*'|[^'">])*?>([\s\S]*?)<\/sub\s*>/gi, '_($1)')
+      .replace(/<\/?(?:br|p|div|li|ul|ol|h[1-6]|blockquote|section|article|table|tr|td|th|hr)(?=[\s/>])(?:"[^"]*"|'[^']*'|[^'">])*>/gi, ' ')
+      .replace(/<\/?(?:a|abbr|b|bdi|bdo|cite|code|del|dfn|em|i|img|ins|kbd|mark|q|s|samp|small|span|strike|strong|sub|sup|time|u|var|wbr)(?=[\s/>])(?:"[^"]*"|'[^']*'|[^'">])*>/gi, '')
+      .replace(/&(#x[0-9a-f]+|#\d+|[a-z][a-z0-9]*);/gi, (entity, key) => {
+        if (key[0] !== '#') return entities[key] ?? entities[key.toLowerCase()] ?? entity;
+        const hex = key[1]?.toLowerCase() === 'x';
+        const number = Number.parseInt(key.slice(hex ? 2 : 1), hex ? 16 : 10);
+        return number > 0 && number <= 0x10ffff && !(number >= 0xd800 && number <= 0xdfff) ? String.fromCodePoint(number) : ' ';
+      })
+      .replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 1200);
+  };
   const readRevealedAnswer = object => {
     if (!isResultPage) return;
     const block = data(object, 'gameBlockState');
@@ -38,19 +68,42 @@ export function discoverQuizMetadata() {
         !Array.isArray(correctChoices) || correctChoices.length < 1 || correctChoices.length > 20 ||
         !correctChoices.every(index => Number.isInteger(index) && index >= 0 && index < numberOfChoices)) return;
     const choices = data(question, 'choices');
-    const text = value => typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 1200) : '';
     revelations.push({
       phase: 'result', roundId: String(questionNumber + 1),
-      question: text(data(object, 'gameBlockTitle')) || text(data(block, 'gameBlockTitle')),
+      question: plainQuizText(data(object, 'gameBlockTitle')) || plainQuizText(data(block, 'gameBlockTitle')),
       answers: [...new Set(correctChoices)].map(index => {
         const choice = Array.isArray(choices) ? data(choices, String(index)) : undefined;
-        return { text: text(choice) || text(data(choice, 'text')) || text(data(choice, 'answer')) || `Proposition ${index + 1}` };
+        return { text: plainQuizText(choice) || plainQuizText(data(choice, 'text')) || plainQuizText(data(choice, 'answer')) || `Proposition ${index + 1}` };
       })
     });
   };
+  const readObservedQuestion = object => {
+    if (!isObservedQuestionPage) return;
+    const block = data(object, 'gameBlockState');
+    const question = data(block, 'question');
+    const rawChoices = data(question, 'choices');
+    const choiceCount = data(rawChoices, 'length');
+    const numberOfChoices = data(question, 'numberOfChoices');
+    const questionNumber = data(object, 'questionNumber');
+    if (!Number.isInteger(questionNumber) || questionNumber < 0 || questionNumber > 9999 ||
+        !Array.isArray(rawChoices) || !Number.isInteger(choiceCount) || choiceCount < 2 || choiceCount > 20 ||
+        (numberOfChoices !== undefined && (!Number.isInteger(numberOfChoices) || numberOfChoices !== choiceCount))) return;
+    const title = plainQuizText(data(object, 'gameBlockTitle')) || plainQuizText(data(block, 'gameBlockTitle'));
+    const placeholder = /^(?:question (?:en image|sans titre)|r[eé]ponse (?:en image|sans texte)|proposition \d+|triangle|circle|square|diamond|red|blue|yellow|green)$/i;
+    if (!title || placeholder.test(title) || /^question\s+\d+(?:\s+(?:sur|of)\s+\d+)?[.!?]?$/i.test(title)) return;
+    const choices = Array.from({ length: choiceCount }, (_, index) => {
+      const choice = data(rawChoices, String(index));
+      return plainQuizText(choice) || plainQuizText(data(choice, 'text')) || plainQuizText(data(choice, 'answer'));
+    });
+    if (choices.some(choice => !choice || placeholder.test(choice))) return;
+    observations.push({ question: title, choices, roundId: String(questionNumber + 1) });
+  };
   const session = (object, source) => {
     if (!object || typeof object !== 'object') return;
-    if (source === 'react-store') readRevealedAnswer(object);
+    if (source === 'react-store') {
+      readRevealedAnswer(object);
+      readObservedQuestion(object);
+    }
     let keys;
     try { keys = Object.keys(object).slice(0, 200); } catch { return; }
     for (const key of keys) {
@@ -159,11 +212,13 @@ export function discoverQuizMetadata() {
   const questionCount = countRecord?.questionCount ?? null;
   const distinctRevelations = [...new Map(revelations.map(value => [JSON.stringify(value), value])).values()];
   const revealed = distinctRevelations.length === 1 ? { revealedAnswer: distinctRevelations[0] } : {};
-  if (ids.length > 1) return { quizId: null, title: '', questionCount, source: 'ambiguous', diagnostic: 'Plusieurs identifiants de quiz sont présents dans la page.', ...revealed };
-  if (ids.length === 1) return { quizId: ids[0], title: titleRecord?.title || '', questionCount, source: idRecord.source, diagnostic: 'Identifiant du quiz retrouvé dans les métadonnées de la page.', ...revealed };
-  if (titleRecord) return { quizId: null, title: titleRecord.title, questionCount, source: titleRecord.source, diagnostic: 'Un titre de quiz est présent, sans identifiant public.', ...revealed };
+  const distinctObservations = [...new Map(observations.map(value => [JSON.stringify(value), value])).values()];
+  const observed = distinctObservations.length === 1 ? { observedQuestion: distinctObservations[0] } : {};
+  if (ids.length > 1) return { quizId: null, title: '', questionCount, source: 'ambiguous', diagnostic: 'Plusieurs identifiants de quiz sont présents dans la page.', ...revealed, ...observed };
+  if (ids.length === 1) return { quizId: ids[0], title: titleRecord?.title || '', questionCount, source: idRecord.source, diagnostic: 'Identifiant du quiz retrouvé dans les métadonnées de la page.', ...revealed, ...observed };
+  if (titleRecord) return { quizId: null, title: titleRecord.title, questionCount, source: titleRecord.source, diagnostic: 'Un titre de quiz est présent, sans identifiant public.', ...revealed, ...observed };
   return {
     quizId: null, title: '', questionCount, source: countRecord?.source || 'none',
-    diagnostic: questionCount ? `La session indique ${questionCount} questions, mais n’a pas transmis l’identifiant du quiz.` : 'Cette page n’a pas transmis de métadonnées de quiz.', ...revealed
+    diagnostic: questionCount ? `La session indique ${questionCount} questions, mais n’a pas transmis l’identifiant du quiz.` : 'Cette page n’a pas transmis de métadonnées de quiz.', ...revealed, ...observed
   };
 }

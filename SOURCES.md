@@ -1,4 +1,4 @@
-# Sources et crédits — 1.3.0
+# Sources et crédits — 1.4.0
 
 **Projet : Ez-Kahoot** · **Création : thomas marsa**
 
@@ -8,6 +8,10 @@
 - [brainwave](https://create.kahoot.it/details/77c46705-dab1-4ca1-a435-c287194db522) est le quiz public d’exemple.
 
 Questions, réponses et illustrations appartiennent à leurs auteurs respectifs. Les indicateurs de correction reprennent la configuration du quiz et ne constituent pas une validation scientifique indépendante.
+
+## Recherche depuis une question reçue
+
+Le point de recherche public `https://create.kahoot.it/rest/kahoots/?query=…&limit=10` a été vérifié directement le 22 octobre 2026, sans connexion à un compte Kahoot ni proxy tiers. Les candidats sont relus avec l’API de document public et comparés à la question et aux propositions reçues par le joueur. Une correspondance unique parmi dix résultats ne prouve pas l’unicité mondiale du quiz. Aucun UUID de la fenêtre animateur n’est utilisé par cette fonctionnalité.
 
 ## Références de code consultées
 

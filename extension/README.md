@@ -1,4 +1,6 @@
-# Ez-Kahoot Companion 1.3.0
+# Ez-Kahoot Companion 1.4.0
+
+La version 1.4 ajoute une recherche de candidat public depuis le texte et les choix réellement reçus par le joueur, sans UUID à saisir. Elle ne garantit pas de retrouver tous les quiz ; le panneau distingue le candidat recherché et la correction reçue après résultat. Les boutons True/False et Vrai/Faux sont associés uniquement comme paires complètes.
 
 Thème violet et blanc, monogramme K⚡ et police Montserrat livrée localement. Après remplacement des fichiers, actualise la carte de l’extension pour charger les nouveaux visuels.
 

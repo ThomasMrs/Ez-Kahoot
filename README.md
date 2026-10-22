@@ -1,4 +1,4 @@
-# Ez-Kahoot 1.3.0
+# Ez-Kahoot 1.4.0
 
 Un panel local en français avec quatre vues : **Explorer**, **Compagnon**, **Bibliothèque** et **Boîte à outils**. Consulte les corrigés de quiz publics ou importés, retrouve une réponse dans ton onglet Kahoot et conserve tes quiz. Créé par **thomas marsa**.
 
@@ -32,11 +32,13 @@ Si le port est occupé par Ez-Kahoot, le lanceur rouvre le panel existant. Sinon
 
 Après une mise à jour de l’extension, clique sur **Actualiser** sur sa carte dans `chrome://extensions`, puis relance le panneau sur Kahoot. Le raccourci **Alt+Maj+K** ouvre l’extension si le navigateur ne l’utilise pas déjà.
 
-Si la page transmet l’identifiant d’un quiz public, le compagnon peut charger son corrigé automatiquement. Sinon, ouvre le quiz dans **Explorer**, puis clique **Envoyer ce quiz au compagnon** dans **Compagnon**. La recherche ponctuelle se trouve dans **Rechercher une question**, repliée dans le popup.
+Si la page transmet l’identifiant d’un quiz public, le compagnon peut charger son corrigé automatiquement. Si aucun identifiant n’est reçu mais que le joueur reçoit le texte et les choix d’une question, le compagnon recherche aussi un candidat dans les quiz publics. Il compare la question, toutes les propositions et le nombre d’éléments de la partie ; il vérifie au plus dix candidats et signale la provenance « Candidat public retrouvé par question ». Plusieurs candidats compatibles ne sont pas départagés automatiquement. Si aucun candidat n’est confirmé, ouvre le quiz dans **Explorer**, puis clique **Envoyer ce quiz au compagnon** dans **Compagnon**. La recherche ponctuelle se trouve dans **Rechercher une question**, repliée dans le popup.
+
+La recherche utilise les informations reçues par l’onglet invoqué et ne nécessite pas de consulter la fenêtre de l’animateur. Si le joueur ne reçoit ni texte ni choix, elle ne peut pas identifier le quiz. Si ces informations arrivent après le résultat, la recherche démarre à ce moment ; cela ne donne pas la réponse à l’avance pour la question terminée.
 
 ### Quand le clic est possible
 
-L’Auto-clic est désactivé au lancement. Il exige une question exacte et unique, un corrigé entièrement renseigné, une seule réponse correcte et une correspondance complète des textes des choix avec des boutons actifs. La question et la manche sont revérifiées avant le clic. L’ordre et les couleurs ne sont pas supposés ; un bouton n’est pas envoyé à répétition.
+L’Auto-clic est désactivé au lancement. Il exige une question exacte et unique, un corrigé entièrement renseigné, une seule réponse correcte et une correspondance complète des textes des choix avec des boutons actifs. La question et la manche sont revérifiées avant le clic. Les paires booléennes complètes **True/False** et **Vrai/Faux** sont reconnues même lorsque les boutons sont inversés. L’ordre et les couleurs ne sont pas supposés ; un bouton n’est pas envoyé à répétition.
 
 Les correspondances approximatives ou ambiguës, les réponses uniquement en images et les sélections multiples restent manuelles. Sur `/answer/result`, une correction déjà reçue est indiquée comme **Correction reçue après la question** ; elle ne déclenche aucun clic et ne sert pas à anticiper la suivante. Le score dépend des règles de la partie et du réseau.
 

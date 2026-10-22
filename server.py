@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import argparse
 import base64
+from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from functools import lru_cache
 from html import unescape
@@ -25,21 +27,26 @@ import ssl
 import subprocess
 import sys
 import threading
+import time
+import unicodedata
 from urllib.error import HTTPError, URLError
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlencode, urlparse
 from urllib.request import Request, urlopen
 import uuid
 import webbrowser
 import zipfile
 
 
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
 EXTENSION = ROOT / "extension"
 MAX_BODY_BYTES = 8 * 1024 * 1024
 MAX_QUESTIONS = 500
 MAX_CHOICES = 20
+MAX_SEARCH_BODY_BYTES = 64 * 1024
+SEARCH_CANDIDATE_LIMIT = 10
+SEARCH_CACHE_SECONDS = 60
 UUID_RE = re.compile(r"(?<![0-9a-f])[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?![0-9a-f])", re.I)
 ALLOWED_HOSTS = {"create.kahoot.it", "play.kahoot.it", "kahoot.it", "www.kahoot.it"}
 EXTENSION_ORIGIN_RE = re.compile(r"chrome-extension://[a-p]{32}")
@@ -302,6 +309,145 @@ def fetch_quiz(quiz_id: str) -> dict:
     return normalize_quiz(data, quiz_id)
 
 
+_SEARCH_OPERATORS = set("+-=<>≤≥≠×÷/^_%*&|()[]{}")
+_SUPERSCRIPTS = str.maketrans(dict(zip("⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿⁱ", "0123456789+-=()ni")))
+_SUBSCRIPTS = str.maketrans(dict(zip("₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎", "0123456789+-=()")))
+_SEARCH_STOP_WORDS = set("""
+a au aux avec ce ces cette cet dans de des du elle elles en est et eux il ils je la le les leur leurs lui ma mais me mes moi mon ne nos notre nous on ou par pas pour qu que quel quelle quelles quels qui sa sans se ses soi son sont sous sur ta te tes toi ton tout tous toute toutes tu un une vos votre vous y
+afin alors ainsi apres avant bien car cela celle celles celui ceux chaque chez comme comment contre depuis donc entre etre fait faire font faut fois laquelle lequel lesquelles lesquels lorsque meme moins ni ont parce pendant peu plus pourquoi quand quoi rien selon ses sein si soit telles tels tres trop vers voici voila explique expliquer expliquee expliquees expliques
+the a an and are as at be because been before being between by can could did do does during each for from had has have how if in into is it its may more most not of on or other our out over same should so some than that their them then there these they this those through to under up use was we were what when where which who why will with within would you your
+following statement statements correct incorrect true false choose chosen identify determine explain explained explanation answer answers question questions bonne bon bonnes bons affirmation affirmations suivante suivantes suivant suivants correcte correctes incorrecte incorrectes
+""".split())
+
+
+def search_match_text(value: str) -> str:
+    """Canonical exact text comparison, retaining mathematical operators."""
+    value = plain_text(value)
+    value = re.sub(r"[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿⁱ]+", lambda match: " ^(" + match.group().translate(_SUPERSCRIPTS) + ") ", value)
+    value = re.sub(r"[₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎]+", lambda match: " _(" + match.group().translate(_SUBSCRIPTS) + ") ", value)
+    value = unicodedata.normalize("NFD", value).lower()
+    value = "".join(character for character in value if not unicodedata.category(character).startswith("M"))
+    value = value.translate(str.maketrans({"−": "-", "﹣": "-", "－": "-"}))
+    pieces = []
+    for character in value:
+        if character in _SEARCH_OPERATORS:
+            pieces.append(" " + character + " ")
+        elif character.isalnum():
+            pieces.append(character)
+        else:
+            pieces.append(" ")
+    return " ".join("".join(pieces).split())
+
+
+def search_choice_texts(values):
+    normalized = [search_match_text(value) for value in values]
+    boolean = {"true": "@true", "vrai": "@true", "false": "@false", "faux": "@false"}
+    if len(normalized) == 2 and all(value in boolean for value in normalized):
+        pair = [boolean[value] for value in normalized]
+        if len(set(pair)) == 2:
+            return Counter(pair)
+    return Counter(normalized)
+
+
+def validate_quiz_search(data) -> tuple[str, tuple[str, ...], int | None]:
+    if not isinstance(data, dict) or set(data) - {"question", "choices", "questionCount"}:
+        raise QuizError("La recherche attend une question et ses propositions visibles.")
+    question = data.get("question")
+    choices = data.get("choices")
+    count = data.get("questionCount")
+    if not isinstance(question, str) or not question.strip() or len(question) > 1200:
+        raise QuizError("La question doit contenir entre 1 et 1 200 caractères.")
+    if not isinstance(choices, list) or not 2 <= len(choices) <= MAX_CHOICES or any(
+        not isinstance(choice, str) or not choice.strip() or len(choice) > 2000 for choice in choices
+    ):
+        raise QuizError("Indique de 2 à 20 propositions de 1 à 2 000 caractères.")
+    if "questionCount" in data and (isinstance(count, bool) or not isinstance(count, int) or not 1 <= count <= MAX_QUESTIONS):
+        raise QuizError("Le nombre de questions doit être un entier de 1 à 500.")
+    if not search_match_text(question) or any(not search_match_text(choice) for choice in choices):
+        raise QuizError("La question et ses propositions doivent contenir du texte exploitable.")
+    return question, tuple(choices), count
+
+
+def public_search_terms(question: str) -> str:
+    words = re.findall(r"[^\W\d_]+|\d+", unicodedata.normalize("NFC", plain_text(question)).lower(), re.UNICODE)
+    useful = [word for word in words if len(word) >= 3 and search_match_text(word) not in _SEARCH_STOP_WORDS]
+    candidates = useful or words
+    # A short query avoids excluding a quiz for generic words in the question.
+    selected = list(dict.fromkeys(candidates))[-2:]
+    query = " ".join(selected)
+    if not query:
+        raise QuizError("La question ne contient pas de mots exploitables pour la recherche.")
+    return query
+
+
+@lru_cache(maxsize=64)
+def _public_search_ids(query: str, cache_epoch: int) -> tuple[str, ...]:
+    endpoint = "https://create.kahoot.it/rest/kahoots/?" + urlencode({"query": query, "limit": SEARCH_CANDIDATE_LIMIT})
+    request = Request(endpoint, headers={"Accept": "application/json", "User-Agent": f"Ez-Kahoot/{VERSION} (public quiz search)"})
+    try:
+        with urlopen(request, timeout=15, context=tls_context()) as response:
+            raw = response.read(MAX_BODY_BYTES + 1)
+        if len(raw) > MAX_BODY_BYTES:
+            raise QuizError("La recherche publique a renvoyé trop de données.", 502)
+        data = json.loads(raw)
+    except HTTPError as error:
+        if error.code == 429:
+            raise QuizError("Kahoot limite temporairement les recherches. Réessaie dans quelques instants.", 429) from None
+        raise QuizError("La recherche publique Kahoot est indisponible.", 502) from None
+    except (URLError, TimeoutError, OSError):
+        raise QuizError("La recherche publique Kahoot est inaccessible.", 502) from None
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        raise QuizError("La recherche publique a renvoyé un document illisible.", 502) from None
+    if not isinstance(data, dict) or not isinstance(data.get("entities"), list):
+        raise QuizError("La recherche publique a renvoyé un format inattendu.", 502)
+    candidates = []
+    for entity in data["entities"][:SEARCH_CANDIDATE_LIMIT]:
+        card = entity.get("card") if isinstance(entity, dict) else None
+        value = card.get("uuid") if isinstance(card, dict) else None
+        if isinstance(value, str) and UUID_RE.fullmatch(value):
+            candidate = str(uuid.UUID(value))
+            if candidate not in candidates:
+                candidates.append(candidate)
+    return tuple(candidates)
+
+
+@lru_cache(maxsize=32)
+def _public_search_candidate(quiz_id: str, cache_epoch: int) -> dict:
+    return fetch_quiz(quiz_id)
+
+
+def search_public_quiz(data) -> dict:
+    question, choices, count = validate_quiz_search(data)
+    expected_question = search_match_text(question)
+    expected_choices = search_choice_texts(choices)
+    epoch = int(time.monotonic() // SEARCH_CACHE_SECONDS)
+    ids = _public_search_ids(public_search_terms(question), epoch)
+    matches = []
+    if ids:
+        with ThreadPoolExecutor(max_workers=min(5, len(ids))) as executor:
+            candidates = [executor.submit(_public_search_candidate, quiz_id, epoch) for quiz_id in ids]
+            for candidate in candidates:
+                try:
+                    quiz = candidate.result()
+                except QuizError as error:
+                    if error.status in {400, 403, 404, 413}:
+                        continue
+                    raise
+                total = len(quiz["questions"]) + quiz["slideCount"] + quiz["skippedCount"]
+                if count is not None and total != count:
+                    continue
+                if any(search_match_text(entry["question"]) == expected_question and
+                       search_choice_texts(choice["text"] for choice in entry["choices"]) == expected_choices
+                       for entry in quiz["questions"]):
+                    matches.append(quiz)
+    if len(matches) > 1:
+        raise QuizError("Plusieurs quiz parmi les candidats publics correspondent à cette question.", 409)
+    if not matches:
+        raise QuizError("Aucun quiz correspondant parmi les dix candidats publics vérifiés.", 404)
+    # This establishes a unique match in this bounded result set, not globally.
+    return {"quiz": matches[0], "source": "public-search"}
+
+
 def companion_config(server) -> dict:
     base_url = f"http://127.0.0.1:{server.server_port}"
     with server.companion_lock:
@@ -403,15 +549,15 @@ class Handler(SimpleHTTPRequestHandler):
                 return False
         return True
 
-    def read_json_body(self):
+    def read_json_body(self, max_bytes=MAX_BODY_BYTES):
         if self.headers.get_content_type() != "application/json":
             raise QuizError("L’import attend un fichier JSON.", 415)
         try:
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
             length = -1
-        if length < 1 or length > MAX_BODY_BYTES:
-            raise QuizError("Le fichier doit faire entre 1 octet et 8 Mo.", 413)
+        if length < 1 or length > max_bytes:
+            raise QuizError("La recherche doit faire entre 1 octet et 64 Kio." if max_bytes == MAX_SEARCH_BODY_BYTES else "Le fichier doit faire entre 1 octet et 8 Mo.", 413)
         raw = self.rfile.read(length)
         if len(raw) != length:
             raise QuizError("Le fichier reçu est incomplet.")
@@ -446,16 +592,18 @@ class Handler(SimpleHTTPRequestHandler):
         if not self.headers.get("Origin"):
             self.json_response({"error": "Une origine de compagnon valide est nécessaire."}, 403)
             return
-        if path not in {"/bridge/health", "/bridge/quiz"}:
+        if path not in {"/bridge/health", "/bridge/quiz", "/bridge/search-quiz"}:
             self.json_response({"error": "Fonction inconnue."}, 404)
             return
         requested_headers = {value.strip().lower() for value in self.headers.get("Access-Control-Request-Headers", "").split(",") if value.strip()}
-        if self.headers.get("Access-Control-Request-Method", "").upper() != "GET" or requested_headers - {"authorization"}:
+        method = "POST" if path == "/bridge/search-quiz" else "GET"
+        allowed_headers = {"authorization", "content-type"} if method == "POST" else {"authorization"}
+        if self.headers.get("Access-Control-Request-Method", "").upper() != method or requested_headers - allowed_headers:
             self.json_response({"error": "Le compagnon autorise uniquement la lecture authentifiée."}, 405)
             return
         self.send_response(204)
-        self.send_header("Access-Control-Allow-Methods", "GET")
-        self.send_header("Access-Control-Allow-Headers", "Authorization")
+        self.send_header("Access-Control-Allow-Methods", method)
+        self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type" if method == "POST" else "Authorization")
         self.send_header("Access-Control-Max-Age", "600")
         if self.headers.get("Access-Control-Request-Private-Network", "").lower() == "true":
             self.send_header("Access-Control-Allow-Private-Network", "true")
@@ -552,6 +700,16 @@ class Handler(SimpleHTTPRequestHandler):
     def do_POST(self):
         self._bridge_origin = None
         path = urlparse(self.path).path
+        if path == "/bridge/search-quiz":
+            if not self.bridge_request():
+                return
+            try:
+                self.json_response(search_public_quiz(self.read_json_body(MAX_SEARCH_BODY_BYTES)))
+            except QuizError as error:
+                self.json_response({"error": str(error)}, error.status)
+            except Exception:
+                self.json_response({"error": "La recherche publique n’a pas pu être vérifiée."}, 502)
+            return
         if path == "/api/companion/pair":
             if not self.pairing_request():
                 return

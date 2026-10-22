@@ -85,7 +85,7 @@ class CompanionBridgeTests(unittest.TestCase):
     def test_connection_code_binds_token_and_actual_port(self):
         status, config, headers = self.request("/api/companion/config")
         self.assertEqual(status, 200)
-        self.assertEqual(config["version"], "1.3.0")
+        self.assertEqual(config["version"], "1.4.0")
         self.assertEqual(config["baseUrl"], self.base)
         self.assertIsNone(config["preparedQuiz"])
         self.assertTrue(config["connectionCode"].startswith("EZK1."))
