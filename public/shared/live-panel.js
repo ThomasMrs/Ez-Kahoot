@@ -15,26 +15,26 @@ export function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, i
   shadow.addEventListener('keydown', event => event.stopPropagation());
   const style = document.createElement('style');
   style.textContent = `
-    :host{all:initial;font:13px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#232825;color-scheme:light}
+    :host{all:initial;font:13px/1.5 Montserrat,Arial,sans-serif;color:#25076b;color-scheme:light}
     *{box-sizing:border-box}button,input{font:inherit}button{cursor:pointer}button:disabled{cursor:default;opacity:.5}
-    button:focus-visible,input:focus-visible{outline:3px solid #a83c20;outline-offset:3px}
-    .panel{background:#fffefa;border:1px solid #d7ddcf;border-radius:12px;box-shadow:0 8px 32px #101a2229;overflow:hidden}
-    header{display:flex;align-items:center;gap:9px;padding:11px 12px;background:#232825;color:#fffefa}
-    .logo{display:grid;place-items:center;flex:none;width:27px;height:27px;background:#ff7855;color:#232825;border-radius:6px;font-weight:850;font-size:17px;letter-spacing:-2px;padding-right:2px}
-    h2{font-size:14px;letter-spacing:-.025em;margin:0;line-height:1.3}.subtitle{display:block;font-size:9px;color:#c8d3be;margin-top:2px}
-    .header-copy{flex:1;min-width:0}.icon-button{display:grid;place-items:center;flex:none;width:30px;height:30px;border:1px solid #697461;border-radius:6px;background:transparent;color:#fffefa;font-size:19px;line-height:1}
-    .icon-button:hover{background:#3b4535}.body{padding:13px 14px;max-height:min(520px,calc(100vh - 140px));overflow:auto}
-    .quiz{font-size:10px;color:#5d655c;margin:0 0 10px;overflow-wrap:anywhere}.state{display:inline-flex;gap:6px;align-items:center;font-size:10px;font-weight:700;color:#526047;margin:0 0 9px}
-    .state::before{content:'';width:6px;height:6px;flex:none;border-radius:50%;background:#929d89}.state[data-state=ready]{color:#315c2a}.state[data-state=ready]::before{background:#4a7d3a}
-    .state[data-state=ambiguous],.state[data-state=unmapped],.state[data-state=unsupported]{color:#795025}.state[data-state=error]{color:#983c26}
+    button:focus-visible,input:focus-visible{outline:3px solid #ffdf00;outline-offset:3px;box-shadow:0 0 0 2px #25076b}
+    .panel{background:#fff;border:1px solid #d6c6f0;border-radius:12px;box-shadow:0 8px 32px #25076b29;overflow:hidden}
+    header{display:flex;align-items:center;gap:9px;padding:11px 12px;background:#46178f;color:#fff}
+    .logo{display:grid;place-items:center;flex:none;width:28px;height:28px}.logo svg{display:block;width:100%;height:100%}
+    h2{display:flex;align-items:center;font-size:22px;letter-spacing:-.055em;margin:0;line-height:1.15;font-weight:900}.wordmark{display:block;width:119px;height:31px}.subtitle{display:block;font-size:9px;color:#e8dcfa;margin-top:2px}
+    .header-copy{flex:1;min-width:0}.icon-button{display:grid;place-items:center;flex:none;width:30px;height:30px;border:1px solid #9470c2;border-radius:6px;background:transparent;color:#fff;font-size:19px;line-height:1}
+    .icon-button:hover{background:#25076b}.body{padding:13px 14px;max-height:min(520px,calc(100vh - 140px));overflow:auto}
+    .quiz{font-size:10px;color:#645675;margin:0 0 10px;overflow-wrap:anywhere}.state{display:inline-flex;gap:6px;align-items:center;font-size:10px;font-weight:700;color:#645675;margin:0 0 9px}
+    .state::before{content:'';width:6px;height:6px;flex:none;border-radius:50%;background:#8c77a4}.state[data-state=ready],.state[data-state=revealed]{color:#1f650a}.state[data-state=ready]::before,.state[data-state=revealed]::before{background:#36851f}
+    .state[data-state=ambiguous],.state[data-state=unmapped],.state[data-state=unsupported]{color:#7a4200}.state[data-state=error]{color:#9f1332}
     .question{font-size:11px;font-weight:600;line-height:1.55;margin:0 0 10px;overflow-wrap:anywhere}.answers{display:grid;gap:6px;list-style:none;padding:0;margin:0}
-    .answers li{background:#eaf1e2;border:1px solid #d5dfcb;border-radius:7px;padding:10px 11px;color:#2f5125;font-size:13px;font-weight:650;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
-    .message{font-size:10px;line-height:1.65;color:#5d655c;margin:10px 0 0;overflow-wrap:anywhere}.message[data-error=true]{color:#963b26}
-    .controls{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-top:1px solid #dfe3d8}
-    label{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;cursor:pointer}input{accent-color:#365d2c;margin:0;width:15px;height:15px}
-    .answer-button{border:1px solid #232825;border-radius:6px;background:#232825;color:#fffefa;padding:7px 10px;font-size:10px;font-weight:650;min-height:32px}.answer-button:hover:not(:disabled){background:#3d4d37}
-    footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 14px;background:#f3f5ed;border-top:1px solid #e1e5d9;font-size:9px;color:#5d655c}
-    .compact-answer{padding:10px 12px;font-size:12px;font-weight:650;line-height:1.5;color:#2f5125;margin:0;max-height:80px;overflow:auto;overflow-wrap:anywhere}
+    .answers li{background:#e7f6df;border:1px solid #b7d7aa;border-radius:7px;padding:10px 11px;color:#1f650a;font-size:13px;font-weight:700;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+    .message{font-size:10px;line-height:1.65;color:#645675;margin:10px 0 0;overflow-wrap:anywhere}.message[data-error=true]{color:#9f1332}
+    .controls{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-top:1px solid #e5dcf2}
+    label{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;cursor:pointer}input{accent-color:#46178f;margin:0;width:15px;height:15px}
+    .answer-button{border:1px solid #46178f;border-radius:6px;background:#46178f;color:#fff;padding:7px 10px;font-size:10px;font-weight:700;min-height:32px}.answer-button:hover:not(:disabled){background:#25076b}
+    footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 14px;background:#f1eafb;border-top:1px solid #e5dcf2;font-size:9px;color:#5f4b78}
+    .compact-answer{padding:10px 12px;font-size:12px;font-weight:700;line-height:1.5;color:#1f650a;margin:0;max-height:80px;overflow:auto;overflow-wrap:anywhere}
     [hidden]{display:none!important}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}`;
   const node = (tag, className, value) => {
     const element = document.createElement(tag);
@@ -58,7 +58,10 @@ export function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, i
   const reduce = button('icon-button', '−', 'Réduire Ez-Kahoot');
   reduce.setAttribute('aria-expanded', 'true');
   const close = button('icon-button', '×', 'Fermer Ez-Kahoot');
-  header.append(node('span', 'logo', 'Ez'), headerCopy, reduce, close);
+  const logo = node('span', 'logo');
+  logo.setAttribute('aria-hidden', 'true');
+  logo.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 34" focusable="false"><path d="M0,3.12411067 L5.3201581,1.75968379 L5.30711462,12.5774704 L14.2901186,3.91304348 L18.9106719,5.68853755 L12.3814229,12.9316206 L16.7118577,28.7075099 L12.013834,28.7075099 L8.5486166,16.6209486 L5.27588933,19.8256917 L5.3201581,28.7075099 L0,28.5173913 L0,3.12411067 Z" fill="#fff"/><path d="M27 1 20 18h7l-5 15 14-22h-8l5-10Z" fill="#ffcc00"/></svg>';
+  header.append(logo, headerCopy, reduce, close);
   const body = node('div', 'body');
   const quizLabel = node('p', 'quiz', hasQuiz(quiz) ? quiz.title || 'Quiz chargé' : 'Recherche du quiz…');
   const state = node('p', 'state');

@@ -1,4 +1,4 @@
-# Sources et crédits — 1.2.0
+# Sources et crédits — 1.3.0
 
 **Projet : Ez-Kahoot** · **Création : thomas marsa**
 
@@ -27,6 +27,11 @@ Le serveur et le compagnon ont été écrits pour Ez-Kahoot. Aucun code de ces d
 La découverte d’Ez-Kahoot recherche des champs de quiz explicites, refuse de transformer un identifiant générique de joueur ou de partie en UUID de quiz et ne retourne pas les identifiants de connexion. Les données absentes restent signalées. La sonde et le panneau sont du code local, sans chargement de script tiers à l’exécution.
 
 Le script console embarque le quiz choisi et les mêmes moteurs de lecture et de décision, sans requête réseau une fois généré. Le pont local utilise un jeton éphémère ; la connexion rapide est réservée à une origine d’extension valide et lie la première origine qui la demande pour l’instance.
+
+## Identité visuelle
+
+- Le monogramme **K⚡** et la variante de mot-symbole adaptent les tracés SVG publics de la [page presse Kahoot](https://kahoot.com/press/) : le point d’exclamation est remplacé par un éclair jaune dessiné pour Ez-Kahoot. Les marques Kahoot restent la propriété de leurs titulaires ; ce projet est indépendant.
+- [Montserrat](https://github.com/google/fonts/tree/main/ofl/montserrat) : police variable Latin livrée localement sous SIL Open Font License, avec licence dans `public/fonts/Montserrat-OFL.txt` et `extension/Montserrat-OFL.txt`. Aucun appel à Google Fonts n’est effectué à l’exécution.
 
 ## Ressources livrées
 

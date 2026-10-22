@@ -1,8 +1,16 @@
-# Vérifications de livraison — 1.2.0
+# Vérifications de livraison — 1.3.0
 
 Ez-Kahoot — thomas marsa · 22 octobre 2026
 
-## Tests réussis
+## Vérifications du thème 1.3
+
+- Les quatre vues ont été contrôlées à **320, 768, 1024 et 1440 pixels CSS** : 16 états sans débordement horizontal et sans violation axe-core WCAG A/AA détectée. L’audit a utilisé la préférence de mouvement réduit pour mesurer les états affichés après transition.
+- Le popup réel (HTML/CSS, API d’extension simulée sur une page locale) a été contrôlé à **320 et 380 pixels** : aucun débordement et aucune violation axe-core détectée. Le panneau flottant a aussi passé cet audit sur une page locale contrôlée.
+- Le SVG K⚡, le thème violet/blanc et le crédit thomas marsa sont affichés dans les trois interfaces. Le panel et le popup chargent Montserrat localement ; le panneau injecté utilise Montserrat si la page hôte la fournit, avec Arial en secours. Les icônes PNG 16, 32, 48 et 128 pixels sont incluses dans le manifeste et l’archive.
+- Un corrigé de 20 questions, avec ses 21 choix corrects révélés, a aussi été vérifié à **320 et 1440 pixels** sans débordement ni violation axe-core détectée.
+- Les **32 tests Python** et **42 tests Node** restent réussis. Les runtimes et le script console ont été reconstruits ; le script généré est syntaxiquement valide et n’effectue aucun appel réseau.
+
+## Vérifications fonctionnelles conservées
 
 - **32 tests Python** : lecture, import, normalisation, accès local, pont authentifié, contrôle des origines, rotation du code, archives et connexion rapide. Le POST d’association est refusé hors origine d’extension valide ; la première origine associée est conservée et une autre reçoit un refus.
 - **42 tests Node** : correspondances, ambiguïtés, exposants et indices, lecture du DOM, décision d’Auto-clic, sélection des boutons et découverte de métadonnées. Les champs génériques de joueur ou de partie ne sont pas acceptés comme UUID de quiz.

@@ -1,6 +1,8 @@
-# Ez-Kahoot 1.2.0
+# Ez-Kahoot 1.3.0
 
 Un panel local en français avec quatre vues : **Explorer**, **Compagnon**, **Bibliothèque** et **Boîte à outils**. Consulte les corrigés de quiz publics ou importés, retrouve une réponse dans ton onglet Kahoot et conserve tes quiz. Créé par **thomas marsa**.
+
+Le thème violet et blanc reprend les quatre couleurs de réponse, avec un monogramme **K⚡** et une police Montserrat embarquée. Le même habillage est appliqué au panel, au popup et au panneau flottant.
 
 ## Démarrer
 

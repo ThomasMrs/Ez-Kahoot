@@ -33,7 +33,7 @@ import webbrowser
 import zipfile
 
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
 EXTENSION = ROOT / "extension"
@@ -44,7 +44,7 @@ UUID_RE = re.compile(r"(?<![0-9a-f])[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]
 ALLOWED_HOSTS = {"create.kahoot.it", "play.kahoot.it", "kahoot.it", "www.kahoot.it"}
 EXTENSION_ORIGIN_RE = re.compile(r"chrome-extension://[a-p]{32}")
 LOOPBACK_HOST_RE = re.compile(r"(?:127\.0\.0\.1|localhost)(?::([0-9]{1,5}))?", re.I)
-EXTENSION_FILES = {"manifest.json", "popup.html", "popup.js", "popup.css", "reader.js", "matching.js", "connection.js", "background.js", "automation.js", "active-choice.js", "live-panel.js", "discovery.js", "probe-runtime.js", "live-runtime.js", "README.md"}
+EXTENSION_FILES = {"manifest.json", "popup.html", "popup.js", "popup.css", "reader.js", "matching.js", "connection.js", "background.js", "automation.js", "active-choice.js", "live-panel.js", "discovery.js", "probe-runtime.js", "live-runtime.js", "README.md", "Montserrat-Latin.woff2", "Montserrat-OFL.txt"}
 
 # A comparison such as x<y is text, not an unfinished HTML element. Only hand
 # complete, recognized markup to HTMLParser; unknown angle brackets stay literal.

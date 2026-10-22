@@ -1,4 +1,6 @@
-# Ez-Kahoot Companion 1.2.0
+# Ez-Kahoot Companion 1.3.0
+
+Thème violet et blanc, monogramme K⚡ et police Montserrat livrée localement. Après remplacement des fichiers, actualise la carte de l’extension pour charger les nouveaux visuels.
 
 **Créé par thomas marsa.** Un petit panneau sur ton onglet Kahoot affiche les réponses d’un corrigé public ou importé et propose un Auto-clic facultatif.
 
