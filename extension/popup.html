@@ -8,32 +8,34 @@
   <script type="module" src="popup.js"></script>
 </head>
 <body data-connected="false">
-  <header class="top"><img class="logo-mark" src="ez-kahoot-mark.svg" alt="" width="34" height="34"><strong>Ez-Kahoot</strong><span class="version">1.4.1</span></header>
+  <header class="top"><img class="logo-mark" src="ez-kahoot-mark.svg" alt="" width="34" height="34"><strong>Ez-Kahoot</strong><span class="version">1.6.0</span></header>
   <main>
     <section id="connection" class="connection-strip" aria-label="Connexion locale">
       <span class="status-dot" id="status-dot" aria-hidden="true"></span>
-      <p id="connection-status" role="status">À connecter</p>
+      <p id="connection-status" role="status">Mode autonome</p>
       <div id="connected-actions" hidden><button type="button" class="text-button" id="forget">Déconnecter</button></div>
-    </section>
-    <section id="quick-connect" class="quick-connect" aria-label="Connexion rapide">
-      <div><strong>Relie ton espace en un clic.</strong><p>Garde Ez-Kahoot lancé sur ton ordinateur.</p></div>
-      <button type="button" class="button secondary wide" id="quick-pair">Connexion rapide <span aria-hidden="true">↗</span></button>
     </section>
     <section class="launch-card" aria-labelledby="launch-title">
       <p class="eyebrow">LE COMPAGNON EN DIRECT</p>
       <h1 id="launch-title">Tes réponses,<br>sur la page.</h1>
-      <p class="launch-description">Un petit panneau suit les questions dans ton onglet Kahoot.</p>
-      <div class="quiz-summary" role="status" aria-live="polite"><span class="quiz-symbol" aria-hidden="true">Q</span><div><span id="quiz-origin">DÉTECTION AUTOMATIQUE</span><strong id="quiz-title">Quiz pas encore reçu</strong><p id="quiz-meta">Connexion locale nécessaire.</p></div></div>
-      <button type="button" class="button primary launch-button wide" id="open-live" disabled>Lancer sur Kahoot <span aria-hidden="true">↗</span></button>
-      <p class="capture-status" id="capture-status" role="status">Ouvre ton onglet Kahoot avant de lancer.</p>
+      <p class="launch-description">Rejoins ta partie. Le panneau recherche le quiz public et affiche les réponses qu’il peut confirmer.</p>
+      <div class="quiz-summary" role="status" aria-live="polite"><span class="quiz-symbol" aria-hidden="true">Q</span><div><span id="quiz-origin">DÉTECTION AUTOMATIQUE</span><strong id="quiz-title">Quiz pas encore reçu</strong><p id="quiz-meta">Recherche publique sans serveur local.</p></div></div>
+      <label class="auto-start-setting"><input type="checkbox" id="auto-start" checked><span>Ouvrir automatiquement sur Kahoot</span></label>
+      <button type="button" class="button primary launch-button wide" id="open-live">Lancer sur Kahoot <span aria-hidden="true">↗</span></button>
+      <p class="capture-status" id="capture-status" role="status">Le panneau s’ouvre automatiquement sur Kahoot.</p>
     </section>
+    <button type="button" class="button secondary wide" id="open-tools">Liens, OCR et mémoire ↗</button>
     <details id="manual-details" class="secondary-panel"><summary>Rechercher une question <span aria-hidden="true">+</span></summary><div class="details-body">
       <div class="button-row"><button type="button" class="button secondary" id="read-tab" disabled>Lire cet onglet</button><button type="button" class="text-button" id="reread" disabled>Relire</button></div>
       <form id="manual-form"><label for="manual-question">Ou colle la question</label><textarea id="manual-question" rows="2" maxlength="2000" placeholder="Le texte de la question…" required></textarea><button type="submit" class="button secondary wide" id="manual-submit" disabled>Retrouver la réponse</button></form>
       <section id="results-section" class="results-section" aria-live="polite"><p class="empty-result">Le corrigé apparaîtra ici.</p></section>
     </div></details>
-    <details id="settings-details" class="secondary-panel"><summary>Connexion avancée <span aria-hidden="true">+</span></summary><div class="details-body">
-      <p class="settings-help">Un autre port ou une connexion rapide indisponible ? Copie le code depuis la vue Compagnon d’Ez-Kahoot.</p>
+    <details id="settings-details" class="secondary-panel"><summary>Quiz importé et connexion locale <span aria-hidden="true">+</span></summary><div class="details-body">
+          <section id="quick-connect" class="quick-connect" aria-label="Connexion rapide">
+      <div><strong>Quiz importé ? Connexion facultative.</strong><p>Le mode automatique fonctionne sans serveur local.</p></div>
+      <button type="button" class="button secondary wide" id="quick-pair">Connexion rapide <span aria-hidden="true">↗</span></button>
+    </section>
+<p class="settings-help">Un autre port ou une connexion rapide indisponible ? Copie le code depuis la vue Compagnon d’Ez-Kahoot.</p>
       <form id="connect-form"><label for="connection-code">Code de connexion</label><textarea id="connection-code" rows="2" spellcheck="false" autocomplete="off" placeholder="EZK1.…" required></textarea><button class="button secondary wide" type="submit">Utiliser ce code</button></form>
       <div class="settings-footer"><span class="local-address" id="local-address">http://127.0.0.1:8765</span><button type="button" class="text-button" id="open-panel">Ouvrir Ez-Kahoot ↗</button></div>
     </div></details>

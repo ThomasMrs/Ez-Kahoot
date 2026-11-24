@@ -1,6 +1,6 @@
 import { escapeHtml as esc } from './data.js';
-import { findMatches } from '../shared/matching.js?v=1.4.1';
-import { copyConsoleScript, downloadConsoleScript } from './console-builder.js?v=1.4.1';
+import { findMatches } from '../shared/matching.js?v=1.5.0';
+import { copyConsoleScript, downloadConsoleScript } from './console-builder.js?v=1.5.0';
 
 const symbols = {
   link: '<path d="m10 13 4-4m-6 7-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 1 1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0"/>',
@@ -58,15 +58,15 @@ export function renderCompanion(container, ctx) {
   const controller = new AbortController();
 
   container.innerHTML = `<div class="companion-view">
-    <header class="cp-heading"><div><p class="cp-kicker">LE LIEN ENTRE TES OUTILS</p><h1>Le compagnon navigateur.</h1><p>Retrouve le corrigé d’une question affichée, sans quitter ton onglet.</p></div><span class="cp-heading-note">Lecture au clic. Réponses en clair.</span></header>
+    <header class="cp-heading"><div><p class="cp-kicker">LE LIEN ENTRE TES OUTILS</p><h1>Le compagnon navigateur.</h1><p>Retrouve le corrigé d’une question affichée, sans quitter ton onglet.</p></div><span class="cp-heading-note">Démarrage automatique. Réponses en clair.</span></header>
     <div class="cp-grid">
       <section class="cp-panel cp-connect" aria-labelledby="cp-connect-title">
-        <div class="cp-panel-heading"><div class="cp-panel-icon">${icon('link')}</div><div><h2 id="cp-connect-title">Relier le navigateur</h2><p>Une extension, une connexion locale.</p></div></div>
+        <div class="cp-panel-heading"><div class="cp-panel-icon">${icon('link')}</div><div><h2 id="cp-connect-title">Relier le navigateur</h2><p>Une extension, sans serveur pour les quiz publics.</p></div></div>
         <a class="cp-download btn btn-primary" href="/downloads/Ez-Kahoot-Companion.zip" download>${icon('download')} Télécharger le compagnon ${icon('arrow')}</a>
-        <details class="cp-guide"><summary>Installer l’extension en trois étapes <span aria-hidden="true">+</span></summary><ol><li><strong>Décompresse l’archive.</strong><span>Garde le dossier contenant le fichier manifest.json.</span></li><li><strong>Ouvre <code>chrome://extensions</code>.</strong><span>Active le mode développeur, clique sur « Charger l’extension non empaquetée », puis choisis ce dossier.</span></li><li><strong>Ouvre Ez-Kahoot Companion.</strong><span>Épingle son icône. Clique « Connexion rapide », puis « Lancer sur Kahoot ».</span></li></ol></details>
+        <details class="cp-guide"><summary>Installer l’extension en trois étapes <span aria-hidden="true">+</span></summary><ol><li><strong>Décompresse l’archive.</strong><span>Garde le dossier contenant le fichier manifest.json.</span></li><li><strong>Ouvre <code>chrome://extensions</code>.</strong><span>Active le mode développeur, clique sur « Charger l’extension non empaquetée », puis choisis ce dossier.</span></li><li><strong>Rejoins ta partie Kahoot.</strong><span>Recharge l’onglet si nécessaire. Le panneau démarre et recherche le quiz public automatiquement.</span></li></ol></details>
         <div class="cp-connection-state" data-connection-region aria-live="polite"></div>
         <div class="cp-prepared" data-prepared-region></div>
-        <p class="cp-session-note">La connexion reste locale. Garde Ez-Kahoot lancé pendant l’utilisation du compagnon.</p>
+        <p class="cp-session-note">Le serveur local est facultatif : garde-le ouvert uniquement pour utiliser un quiz importé.</p>
       </section>
       <section class="cp-panel cp-search" aria-labelledby="cp-search-title">
         <div class="cp-panel-heading"><div class="cp-panel-icon cp-search-icon">${icon('search')}</div><div><h2 id="cp-search-title">Retrouver une question</h2><p>Une recherche immédiate dans le quiz chargé.</p></div></div>
@@ -96,7 +96,7 @@ export function renderCompanion(container, ctx) {
   function renderConnection() {
     if (disposed) return;
     const advancedOpen = connectionRegion.querySelector('details')?.open || !!connectionError;
-    connectionRegion.innerHTML = `<div class="cp-quick-start"><strong>Deux clics pour jouer.</strong><p>Dans l’extension : <b>Connexion rapide</b>, puis <b>Lancer sur Kahoot</b>. Le petit panneau reste sur la page.</p><span class="cp-state ${config && !connectionError ? 'is-ready' : ''}"><i aria-hidden="true"></i>${connectionBusy ? 'Connexion…' : config && !connectionError ? 'Serveur prêt' : 'À reconnecter'}</span></div><details class="cp-guide cp-advanced" ${advancedOpen ? 'open' : ''}><summary>Code et connexion avancée <span aria-hidden="true">+</span></summary><div class="cp-code-heading"><label for="cp-connection-code">Code de connexion</label></div>
+    connectionRegion.innerHTML = `<div class="cp-quick-start"><strong>Rejoins la partie, le panneau suit.</strong><p>Le mode autonome recherche un corrigé public à partir des informations reçues. Pour un quiz importé, utilise <b>Connexion rapide</b>, puis <b>Lancer sur Kahoot</b>.</p><span class="cp-state ${config && !connectionError ? 'is-ready' : ''}"><i aria-hidden="true"></i>${connectionBusy ? 'Connexion…' : config && !connectionError ? 'Serveur prêt' : 'À reconnecter'}</span></div><details class="cp-guide cp-advanced" ${advancedOpen ? 'open' : ''}><summary>Code et connexion avancée <span aria-hidden="true">+</span></summary><div class="cp-code-heading"><label for="cp-connection-code">Code de connexion</label></div>
       <div class="cp-code-field"><input id="cp-connection-code" type="${revealCode ? 'text' : 'password'}" readonly autocomplete="off" spellcheck="false" value="${esc(config?.connectionCode || '')}" placeholder="${connectionBusy ? 'Préparation du code…' : 'Code indisponible'}" ${config ? '' : 'disabled'}><button type="button" class="cp-icon-button" data-cp-action="reveal-code" aria-label="${revealCode ? 'Masquer le code de connexion' : 'Afficher le code de connexion'}" aria-pressed="${revealCode}" ${config && !connectionBusy ? '' : 'disabled'}>${icon('eye')}</button></div>
       <div class="cp-code-actions"><button type="button" class="btn btn-secondary" data-cp-action="copy-code" ${config && !connectionBusy ? '' : 'disabled'}>${icon('copy')} Copier le code</button><button type="button" class="cp-text-button" data-cp-action="${config ? 'reset' : 'retry'}" ${connectionBusy ? 'disabled' : ''}>${config ? 'Régénérer le code' : 'Réessayer'}</button></div>
       <p class="cp-code-help">Régénérer le code déconnecte les extensions déjà associées.</p>
@@ -106,7 +106,7 @@ export function renderCompanion(container, ctx) {
   function renderPrepared() {
     if (disposed) return;
     const prepared = config?.preparedQuiz;
-    preparedRegion.innerHTML = `<div class="cp-prepared-copy"><span class="cp-small-label">PRÊT POUR LE COMPAGNON</span><strong>${esc(prepared?.title || 'Aucun quiz envoyé')}</strong><p>${prepared ? `${Number(prepared.questionCount) || 0} questions disponibles dans l’extension.` : 'Envoie un quiz pour pouvoir retrouver ses réponses depuis l’extension.'}</p></div><button type="button" class="btn ${quiz ? 'btn-primary' : 'btn-secondary'}" data-cp-action="${quiz ? 'prepare' : 'explore'}" ${sendBusy || (quiz && (!config || connectionBusy)) ? 'disabled' : ''}>${sendBusy ? 'Envoi…' : quiz ? 'Envoyer ce quiz au compagnon' : 'Charger un quiz'} ${icon('arrow')}</button>`;
+    preparedRegion.innerHTML = `<div class="cp-prepared-copy"><span class="cp-small-label">PRÊT POUR LE COMPAGNON</span><strong>${esc(prepared?.title || 'Aucun quiz envoyé')}</strong><p>${prepared ? `${Number(prepared.questionCount) || 0} questions disponibles dans l’extension.` : 'Facultatif : envoie ton quiz importé pour l’utiliser avec la connexion locale.'}</p></div><button type="button" class="btn ${quiz ? 'btn-primary' : 'btn-secondary'}" data-cp-action="${quiz ? 'prepare' : 'explore'}" ${sendBusy || (quiz && (!config || connectionBusy)) ? 'disabled' : ''}>${sendBusy ? 'Envoi…' : quiz ? 'Envoyer ce quiz au compagnon' : 'Charger un quiz'} ${icon('arrow')}</button>`;
   }
 
   function renderResults(moveFocus = false) {

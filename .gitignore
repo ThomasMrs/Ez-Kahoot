@@ -6,3 +6,5 @@ __pycache__/
 !.env.example
 .venv/
 node_modules/
+
+.browser-results/

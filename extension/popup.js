@@ -15,7 +15,7 @@ let quizSource = 'waiting';
 function updateQuizSummary() {
   $('#quiz-origin').textContent = quiz ? quizSource === 'detected' ? 'QUIZ DÉTECTÉ' : 'QUIZ PRÉPARÉ' : 'DÉTECTION AUTOMATIQUE';
   $('#quiz-title').textContent = quiz?.title || 'Quiz pas encore reçu';
-  $('#quiz-meta').textContent = !connected ? 'Connexion locale nécessaire.' : quiz
+  $('#quiz-meta').textContent = !connected ? 'Recherche publique sans serveur local.' : quiz
     ? `${quiz.questions.length} questions · prêt à lancer`
     : 'Il sera recherché depuis la partie.';
 }
@@ -40,7 +40,7 @@ function connectionStatus(message, active = false) {
 
 function updateButtons() {
   $('#read-tab').disabled = busy || !connected;
-  $('#open-live').disabled = busy || !connected;
+  $('#open-live').disabled = busy;
   $('#reread').disabled = busy || !connected;
   $('#manual-submit').disabled = busy || !connected;
   $('#manual-question').disabled = busy || !connected;
@@ -48,6 +48,7 @@ function updateButtons() {
   $('#connect-form button').disabled = busy;
   $('#open-panel').disabled = busy;
   $('#forget').disabled = busy;
+  $('#auto-start').disabled = busy;
   document.body.setAttribute('aria-busy', String(busy));
 }
 
@@ -177,11 +178,13 @@ async function openLivePanel() {
   const probeId = probed[0]?.result?.quizId;
   const detectedId = typeof probeId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(probeId)
     ? probeId.toLowerCase() : capture.quizId || '';
-  try { await loadQuiz(detectedId); }
-  catch (error) {
-    if (error.status !== 404) throw error;
-    quiz = null;
-  }
+  if (connected) {
+    try { await loadQuiz(detectedId); }
+    catch (error) {
+      if (error.status !== 404) throw error;
+      quiz = null;
+    }
+  } else quiz = null;
   const questionCount = probed[0]?.result?.questionCount;
   const total = quiz?.questions?.length + (Number(quiz?.slideCount) || 0) + (Number(quiz?.skippedCount) || 0);
   if (questionCount && quiz && total !== questionCount) quiz = null;
@@ -190,12 +193,12 @@ async function openLivePanel() {
     await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['live-runtime.js'] });
     const execution = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      func: preparedQuiz => {
+      func: (preparedQuiz, options) => {
         if (typeof globalThis.__ezKahootStart !== 'function') throw new Error('Panneau indisponible.');
-        globalThis.__ezKahootStart(preparedQuiz);
+        globalThis.__ezKahootStart(preparedQuiz, options);
         return { ok: true };
       },
-      args: [quiz]
+      args: [quiz, { publicOnly: !connected }]
     });
     if (execution[0]?.result?.ok !== true) throw new Error('Démarrage non confirmé.');
   } catch {
@@ -243,11 +246,21 @@ async function quickPair() {
     await connectCandidate(decodeConnection(config.connectionCode));
   } catch {
     $('#settings-details').open = true;
-    throw new Error('Lance Ez-Kahoot puis réessaie. Tu peux aussi utiliser le code dans « Connexion avancée ».');
+    throw new Error('Lance Ez-Kahoot puis réessaie. Tu peux aussi utiliser le code dans « Quiz importé et connexion locale ».');
   }
 }
 
 $('#quick-pair').addEventListener('click', () => task(quickPair));
+$('#auto-start').addEventListener('change', () => task(async () => {
+  const enabled = $('#auto-start').checked;
+  try {
+    await chrome.storage.local.set({ ezkAutoStart: enabled });
+    status(enabled ? 'Démarrage automatique activé sur tes pages Kahoot.' : 'Démarrage automatique désactivé. Tu peux lancer le panneau ici.', 'success');
+  } catch {
+    $('#auto-start').checked = !enabled;
+    throw new Error('Le réglage n’a pas pu être enregistré. Réessaie.');
+  }
+}));
 $('#connect-form').addEventListener('submit', event => {
   event.preventDefault();
   task(() => connectCandidate(decodeConnection($('#connection-code').value)));
@@ -276,7 +289,7 @@ $('#forget').addEventListener('click', () => task(async () => {
   quiz = null;
   capture = null;
   quizSource = 'waiting';
-  connectionStatus('À connecter', false);
+  connectionStatus('Mode autonome', false);
   showQuizReady();
   status('Connexion supprimée sur ce navigateur.');
   $('#quick-pair').focus();
@@ -292,9 +305,11 @@ $('#results-section').addEventListener('click', async event => {
 });
 
 task(async () => {
+  const preferences = await chrome.storage.local.get('ezkAutoStart');
+  $('#auto-start').checked = preferences.ezkAutoStart !== false;
   try {
     const stored = await chrome.storage.local.get(STORAGE_KEY);
-    if (!stored[STORAGE_KEY]) { updateQuizSummary(); return; }
+    if (!stored[STORAGE_KEY]) { connectionStatus('Mode autonome', false); return; }
     connection = validateConnection(stored[STORAGE_KEY]);
     await bridge('/bridge/health');
     connectionStatus('Connecté à Ez-Kahoot', true);
@@ -305,7 +320,12 @@ task(async () => {
       showQuizReady();
     }
   } catch (error) {
-    connectionStatus('À reconnecter', false);
-    status('Lance Ez-Kahoot, puis clique sur « Connexion rapide ».', 'error');
+    connectionStatus('Mode autonome · panel local déconnecté', false);
+    status('Le panneau automatique reste disponible. Pour un quiz importé, reconnecte le panel local.');
   }
 });
+
+$('#open-tools').addEventListener('click', () => task(async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  await chrome.tabs.create({ url: chrome.runtime.getURL('tools.html') + (Number.isInteger(tab?.id) ? '?tab=' + tab.id : '') });
+}));

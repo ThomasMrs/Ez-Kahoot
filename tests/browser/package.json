@@ -1,0 +1,9 @@
+{
+  "name": "ez-kahoot-browser-checks",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@axe-core/playwright": "4.11.1",
+    "playwright": "1.65.1"
+  }
+}

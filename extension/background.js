@@ -1,5 +1,11 @@
 import { validateConnection } from './connection.js';
 import { normalizeText } from './matching.js';
+import { fetchPublicQuiz, fetchSharedQuiz, searchPublicQuiz, matchingQuestion } from './public-api.js';
+
+import { observeSession, forgetSession } from './session-context.js';
+import { cleanObservation, roundNumber } from './observations.js';
+import { rememberCorrection, lookupCorrection } from './correction-memory.js';
+import { runToolAction } from './tool-actions.js';
 
 const KAHOOT_HOSTS = new Set(['kahoot.it', 'create.kahoot.it', 'play.kahoot.it']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -154,12 +160,69 @@ async function searchObservedQuestion(connection, tabId, metadata, knownQuizId) 
   return pending;
 }
 
+async function discoverPublic(message, sender, metadata, url) {
+  try {
+    // Use visible text too when the optional React metadata is unavailable.
+    if (!metadata.observedQuestion && /^(?:\/(?:v2\/)?gameblock|\/answer\/results?)\/?$/.test(url.pathname)) {
+      const execution = await chrome.scripting.executeScript({ target: { tabId: sender.tab.id }, files: ['reader.js'] });
+      const capture = execution[0]?.result;
+      const total = String(capture?.roundId || '').match(/(?:\/|\bsur\b|\bof\b)\s*([1-9]\d{0,2})\s*$/i);
+      if (!metadata.questionCount && total && Number(total[1]) <= 500) metadata.questionCount = Number(total[1]);
+      const observed = { question: capture?.question, choices: capture?.choices?.map(choice => choice?.text), roundId: capture?.roundId || 'visible' };
+      const valid = metadataOnly({ observedQuestion: observed }, false, true).observedQuestion;
+      if (valid) metadata.observedQuestion = valid;
+    }
+    const observed = cleanObservation(metadata.observedQuestion);
+    if (observed) metadata.observedQuestion = observed;
+    else delete metadata.observedQuestion;
+    const session = await observeSession(sender.tab.id, metadata, url.pathname);
+    let memoryWarning = '';
+    if (metadata.revealedAnswer && observed) {
+      try {
+        const view = await chrome.scripting.executeScript({ target: { tabId: sender.tab.id }, files: ['reader.js'] });
+        if (roundNumber(view[0]?.result?.roundId) === observed.roundId) await rememberCorrection(observed, metadata.revealedAnswer);
+      }
+      catch { memoryWarning = ' La correction n’a pas pu être mémorisée.'; }
+    }
+    if (observed && session.selectedId) {
+      let selected;
+      try { selected = await fetchSharedQuiz(session.selectedId); }
+      catch (error) { if (![400, 404].includes(error.status)) throw error; }
+      if (selected && matchingQuestion(selected, observed, metadata.questionCount)) return { ok: true, metadata,
+        quiz: selected, source: 'shared-link', searchStatus: 'matched', discoveryMessage: 'Question et propositions vérifiées dans ton lien.' + memoryWarning };
+    }
+    if (observed) {
+      let memory;
+      try { memory = await lookupCorrection(observed); } catch { memoryWarning = ' Mémoire locale inaccessible.'; }
+      if (memory) return { ok: true, metadata, quiz: memory, source: 'local-memory', searchStatus: 'matched' };
+    }
+    if (metadata.quizId) {
+      if (typeof message.knownQuizId === 'string' && message.knownQuizId.toLowerCase() === metadata.quizId) return { ok: true, metadata, quiz: null, source: 'public-id', searchStatus: 'matched' };
+      return { ok: true, metadata, quiz: await fetchPublicQuiz(metadata.quizId), source: 'public-id' };
+    }
+    if (!observed) return { ok: true, metadata, quiz: null,
+      discoveryMessage: 'En attente du texte et des propositions, ou de l’identifiant public du quiz.' + memoryWarning };
+    if (typeof message.knownQuizId === 'string' && UUID.test(message.knownQuizId)) {
+      let known;
+      try { known = await fetchPublicQuiz(message.knownQuizId); }
+      catch (error) { if (![400, 404].includes(error.status)) throw error; }
+      if (known && session.history.every(item => matchingQuestion(known, item, metadata.questionCount))) return { ok: true, metadata, quiz: null, source: 'public-search', searchStatus: 'matched' };
+    }
+    return { ok: true, metadata, quiz: await searchPublicQuiz(observed, metadata.questionCount, session.history, metadata.title),
+      source: 'public-search', searchStatus: 'matched', discoveryMessage: `Candidat public vérifié sur ${session.history.length} question(s) et leurs propositions.${memoryWarning}` };
+  } catch (error) {
+    if ([404, 409].includes(error.status)) return { ok: true, metadata, quiz: null,
+      searchStatus: error.status === 409 ? 'ambiguous' : 'not-found', discoveryMessage: error.message };
+    return { ok: false, metadata, error: error.message || 'Recherche publique indisponible.' };
+  }
+}
+
 export async function discoverForTab(message, sender) {
   let metadata = null;
   try {
     let url;
     try { url = new URL(sender?.tab?.url || ''); } catch { /* Reject restricted senders below. */ }
-    if (!Number.isInteger(sender?.tab?.id) || sender.tab.id < 0 || !url ||
+    if (!Number.isInteger(sender?.tab?.id) || sender.tab.id < 0 || (sender.frameId != null && sender.frameId !== 0) || !url ||
         url.protocol !== 'https:' || !KAHOOT_HOSTS.has(url.hostname)) {
       throw new Error('La recherche doit partir de ton onglet Kahoot.');
     }
@@ -173,6 +236,7 @@ export async function discoverForTab(message, sender) {
     }
     metadata = metadataOnly(execution[0]?.result, /^\/answer\/results?\/?$/.test(url.pathname),
       /^(?:\/(?:v2\/)?gameblock|\/answer\/results?)\/?$/.test(url.pathname));
+    if (message?.publicOnly === true) return await discoverPublic(message, sender, metadata, url);
     if (!metadata.quizId) {
       if (!metadata.observedQuestion || (message?.knownQuizMatchesObserved === true &&
           typeof message.knownQuizId === 'string' && message.knownQuizId.trim() && message.knownQuizId.length <= 200)) {
@@ -221,7 +285,10 @@ export async function discoverForTab(message, sender) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === 'EZK_TOOLS') { runToolAction(message, sender).then(sendResponse); return true; }
   if (message?.type !== 'EZK_DISCOVER') return false;
   discoverForTab(message, sender).then(sendResponse);
   return true;
 });
+
+chrome.tabs?.onRemoved?.addListener(tabId => { forgetSession(tabId).catch(() => {}); });

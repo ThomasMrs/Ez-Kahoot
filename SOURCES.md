@@ -1,4 +1,4 @@
-# Sources et crédits — 1.4.1
+# Sources et crédits — 1.6.0
 
 **Projet : Ez-Kahoot** · **Création : thomas marsa**
 
@@ -43,3 +43,11 @@ Le script console embarque le quiz choisi et les mêmes moteurs de lecture et de
 - GSAP 3.12.5 : notice dans `public/vendor/GSAP-NOTICE.txt`. La bibliothèque est incluse localement et ne requiert pas de CDN à l’exécution.
 
 Le serveur utilise la bibliothèque standard de Python. `scripts/build_companion.py` génère les runtimes et fichiers partagés sans dépendance tierce.
+
+## OCR local et ajouts 1.6
+
+- [Tesseract.js — installation locale](https://github.com/naptha/tesseract.js/blob/master/docs/local-installation.md) et [API](https://github.com/naptha/tesseract.js/blob/master/docs/api.md) : configuration des chemins locaux du worker, du moteur et des langues. Versions embarquées : Tesseract.js 7.0.0, tesseract.js-core 7.0.0, données fra/eng 1.0.0. Licences et empreintes dans `extension/vendor/ocr/`.
+- [Kazworks10/Kahoot-auto-answer](https://github.com/Kazworks10/Kahoot-auto-answer) : contexte de recherche publique à partir de plusieurs observations.
+- [MintOcha/KahootExt](https://github.com/MintOcha/KahootExt) : contexte de réception de messages de quiz dans le navigateur. Aucune logique d’IA ni de modification des messages envoyés n’est reprise.
+
+Le récepteur passif, la mémoire, le traitement des liens et la recherche croisée sont des modules écrits pour cette version. Le périmètre de recherche autonome passe à trois requêtes et vingt candidats maximum ; une correspondance reste un candidat, pas une preuve d’unicité dans tout Kahoot. Les observations historiques de forum ont servi de pistes, pas de preuve de fonctionnement actuel.

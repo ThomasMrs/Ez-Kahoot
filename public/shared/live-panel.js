@@ -166,7 +166,7 @@ export function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, i
       autoState.textContent = auto.checked ? (document.hidden ? 'Auto-clic en pause' : 'Auto-clic activé') : 'Auto-clic désactivé';
       subtitle.textContent = decision.status === 'revealed' ? 'Correction après la question' : attemptedRound ? 'Une tentative pour cette question' : 'Question en direct';
     }
-    quizSource.hidden = currentQuizSource !== 'public-search' || !hasQuiz(currentQuiz) || decision.status === 'revealed';
+    quizSource.hidden = !currentQuizSource || !hasQuiz(currentQuiz) || decision.status === 'revealed';
     answerOnce.disabled = decision.status !== 'ready' || attemptedRound || document.hidden;
   }
   function refresh() {
@@ -275,8 +275,10 @@ export function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, i
     },
     setQuizSource(value) {
       if (disposed) return;
-      currentQuizSource = value === 'public-search' ? value : '';
-      quizSource.hidden = currentQuizSource !== 'public-search' || !hasQuiz(currentQuiz) || latest.decision.status === 'revealed';
+      const sources = { 'public-search': 'Candidat public retrouvé par questions', 'shared-link': 'Quiz chargé depuis ton lien', 'local-memory': 'Correction mémorisée après résultat', 'public-id': 'Quiz public identifié' };
+      currentQuizSource = Object.hasOwn(sources, value) ? value : '';
+      quizSource.textContent = sources[currentQuizSource] || '';
+      quizSource.hidden = !currentQuizSource || !hasQuiz(currentQuiz) || latest.decision.status === 'revealed';
     },
     setDiscoveryStatus(value) {
       if (disposed) return;

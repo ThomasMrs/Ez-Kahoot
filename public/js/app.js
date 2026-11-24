@@ -2,8 +2,8 @@ import { icon } from './icons.js';
 import { readLibrary, saveQuiz as persistQuiz, escapeHtml as esc } from './data.js';
 import { renderLibrary } from './library.js';
 import { exportQuiz, copyAnswers, printQuiz } from './exports.js';
-import { renderTools } from './tools.js?v=1.4.1';
-import { renderCompanion } from './companion.js?v=1.4.1';
+import { renderTools } from './tools.js?v=1.5.0';
+import { renderCompanion } from './companion.js?v=1.5.0';
 
 const views = [
   { id: 'explorer', label: 'Explorer', icon: 'grid' },

@@ -4,6 +4,7 @@ import base64
 import importlib.util
 from io import BytesIO
 import json
+import re
 from pathlib import Path
 import sys
 import tempfile
@@ -85,7 +86,7 @@ class CompanionBridgeTests(unittest.TestCase):
     def test_connection_code_binds_token_and_actual_port(self):
         status, config, headers = self.request("/api/companion/config")
         self.assertEqual(status, 200)
-        self.assertEqual(config["version"], "1.4.1")
+        self.assertEqual(config["version"], server.VERSION)
         self.assertEqual(config["baseUrl"], self.base)
         self.assertIsNone(config["preparedQuiz"])
         self.assertTrue(config["connectionCode"].startswith("EZK1."))
@@ -277,6 +278,22 @@ class CompanionBridgeTests(unittest.TestCase):
                 status, _, returned = self.request("/downloads/Ez-Kahoot-Companion.zip", headers=self.auth())
                 self.assertEqual(status, 403)
                 self.assertIsNone(returned.get("Access-Control-Allow-Origin"))
+
+    def test_installable_archive_includes_auto_start_and_every_module_dependency(self):
+        with zipfile.ZipFile(BytesIO(server.extension_archive())) as archive:
+            names = set(archive.namelist())
+            manifest = json.loads(archive.read("manifest.json"))
+            self.assertEqual(manifest["version"], server.VERSION)
+            for content_script in manifest["content_scripts"]:
+                for name in content_script["js"]:
+                    self.assertIn(name, names)
+            self.assertIn(manifest["background"]["service_worker"], names)
+            for name in names:
+                if name.endswith(".js"):
+                    source = archive.read(name).decode()
+                    for dependency in re.findall(r'''from ['"]\./([^'"]+)['"]''', source):
+                        self.assertIn(dependency, names, f"Missing import in {name}")
+            self.assertNotIn("tests/public-api.test.mjs", names)
 
 
 if __name__ == "__main__":

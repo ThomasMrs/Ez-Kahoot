@@ -1,3 +1,60 @@
+# Vérifications de livraison — 1.6.0
+
+Ez-Kahoot — thomas marsa · 24 novembre 2026
+
+## Résultat
+
+**41 tests Python et 96 tests Node réussis.** Extension MV3 chargée dans Chromium 159 avec un profil isolé. Aucun serveur Python ni clé d’IA nécessaire aux nouvelles fonctions.
+
+- Recherche publique réelle depuis un DOM de jeu contrôlé : réponse de la première question, passage à la deuxième, masquage sur changement des choix ou question inconnue. Démarrage automatique, réglage persistant, fermeture et popup 320/380 pixels vérifiés.
+- Vrai objet WebSocket du navigateur, trames de test routées par Playwright : réception en monde MAIN, extraction de la question et recherche sans texte de question dans le DOM.
+- Résultat reçu avec numéro de manche explicite et compteur DOM correspondant : correction enregistrée, puis retrouvée hors ligne dans une nouvelle phase de jeu. La source mémoire est affichée.
+- Revue avant publication : les mises à jour de métadonnées préservent désormais la question sans rajeunir son affichage. Un résultat reçu après 605 secondes conserve ses choix ; le contexte expire après 15 minutes et est réinitialisé au changement de quiz. Les deux tests ciblés échouaient avant le correctif et passent après. La fraîcheur d’affichage reste limitée à 30 secondes.
+- Liens : chargement, association et retrait sur un onglet joueur ; classification séparée des devoirs et PIN ; refus des domaines étrangers et identifiants contradictoires. Les quiz non répertoriés et les refus HTTP sont simulés dans les tests unitaires.
+- Recherche croisée : deux candidats identiques sur une question sont départagés par une deuxième observation. Les propositions, le nombre d’éléments et l’unicité des questions restent exigés.
+- OCR **réel** de l’image de test avec moteur et langues embarqués, requêtes externes bloquées : texte français reconnu, propositions séparées et correction retrouvée dans la mémoire. Annulation pendant le démarrage vérifiée.
+- Capture d’écran : tests du cycle de capture avec API simulée, sans audio et arrêt des pistes après image ou erreur. Le sélecteur natif d’écran/onglet n’a pas été manipulé manuellement.
+- Mémoire : résultats seulement, mauvaise manche rejetée, propositions changées rejetées, réponses multiples, accès concurrents, plafond de 100 entrées, contradictions bloquantes, export JSON, suppression individuelle et annulation de l’effacement global vérifiés.
+- Interface Outils à 320, 768 et 1440 pixels sans débordement horizontal ; inspection visuelle. Audit axe-core WCAG A/AA sans violation détectée sur l’état testé. Aucune erreur JavaScript observée.
+- Reconstruction des runtimes et des dépendances OCR verrouillées vérifiée. L’archive d’extension contient tous les modules, moteurs, langues et licences nécessaires ; les dépendances de développement et profils de test sont exclus.
+
+## Limites
+
+Aucune partie réelle avec PIN n’a été rejointe pour cette version. Les échanges réseau des nouvelles fonctions sont des fixtures ; le test de recherche publique utilise l’API réelle. Ces essais ne prouvent pas la compatibilité avec tous les états ou changements futurs du client Kahoot. Le score en partie et le comportement du sélecteur natif de capture restent non vérifiés.
+
+Une question privée sans corrigé reçu, lien accessible ni correction déjà mémorisée reste sans réponse. L’OCR reconnaît du texte ; il ne résout pas une question. Une correction historique peut devenir obsolète si l’auteur change le corrigé. Les observations qui se contredisent bloquent leur réutilisation.
+
+## Reproduire
+
+Les commandes figurent dans `README.md`. `tests/browser/features.mjs` teste les nouvelles fonctions avec des fixtures et peut cibler une archive décompressée via `EZK_EXTENSION_DIR`. `tests/browser/public-smoke.mjs` teste la recherche publique réelle. Le moteur OCR est reproductible via `scripts/ocr/package-lock.json` et `scripts/vendor_ocr.py`.
+
+Les vérifications ci-dessous sont l’historique des versions précédentes.
+
+---
+
+# Vérifications de livraison — 1.5.0
+
+Ez-Kahoot — thomas marsa · 23 novembre 2026
+
+## Mode autonome et démarrage automatique
+
+**41 tests Python et 80 tests Node réussis** après les dernières modifications. La reconstruction des fichiers générés est reproductible et l’archive d’installation contient tous les modules référencés.
+
+- Extension réellement chargée dans Chromium 159 avec un profil de test isolé. Aucun serveur Python, aucune connexion locale et aucune ouverture du popup pour le démarrage initial.
+- Page de jeu contrôlée sur une URL Kahoot interceptée par le test : la recherche de `brainwave` a utilisé les endpoints publics réels de Kahoot. La bonne réponse de la première question s’est affichée, puis celle de la deuxième après changement du DOM. Une question inconnue a fait disparaître l’ancienne réponse.
+- Désactivation/réactivation via le vrai popup et `chrome.storage`, persistance après rechargement, fermeture du panneau et absence de doublon vérifiées. Auto-clic désactivé par défaut.
+- Popup inspecté à 320 et 380 pixels : aucun débordement horizontal ni erreur JavaScript observée.
+- La lecture directe du quiz public de démonstration a retourné 20 QCM ; sa recherche à partir d’une question et de ses propositions a également réussi.
+- Tests supplémentaires : lecture publique anonyme, normalisation, corrections inconnues, doublons, caches, limites de taille, requêtes groupées, erreurs amont, limitation de fréquence, lancement automatique, observation reçue et rejet d’une manche périmée.
+
+## Limites de cette validation
+
+Une page contrôlée n’est pas une partie réelle : aucune partie avec PIN n’a été rejointe pour cette livraison. Le test navigateur utilise les véritables APIs d’extension et de recherche publique, mais simule le DOM du joueur. Il ne valide donc pas tous les états actuels du client Kahoot. Le mode automatique ne garantit ni l’identification de tous les quiz, ni les réponses à un quiz privé ou sans données suffisantes. Le score en partie n’a pas été testé.
+
+Les vérifications des versions précédentes ci-dessous sont conservées comme historique ; elles ne décrivent pas des essais refaits sur une partie réelle pour la version 1.5.0.
+
+---
+
 # Vérifications de livraison — 1.4.1
 
 Ez-Kahoot — thomas marsa · 22 octobre 2026

@@ -1,15 +1,18 @@
 {
   "manifest_version": 3,
   "name": "Ez-Kahoot Companion",
-  "version": "1.4.1",
-  "description": "Relie la question visible à un corrigé chargé dans Ez-Kahoot. Créé par thomas marsa.",
+  "version": "1.6.0",
+  "description": "Recherche publique croisée, liens, OCR local et mémoire des corrections révélées. Sans IA générative.",
   "permissions": [
     "activeTab",
     "scripting",
     "storage"
   ],
   "host_permissions": [
-    "http://127.0.0.1/*"
+    "http://127.0.0.1/*",
+    "https://kahoot.it/*",
+    "https://play.kahoot.it/*",
+    "https://create.kahoot.it/*"
   ],
   "background": {
     "service_worker": "background.js",
@@ -32,12 +35,36 @@
     }
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; worker-src 'self'; connect-src 'self' https://create.kahoot.it http://127.0.0.1:*"
   },
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://kahoot.it/*",
+        "https://play.kahoot.it/*"
+      ],
+      "js": [
+        "network-runtime.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://kahoot.it/*",
+        "https://play.kahoot.it/*"
+      ],
+      "js": [
+        "live-runtime.js",
+        "autostart.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
 }

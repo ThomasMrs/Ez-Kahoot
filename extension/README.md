@@ -1,63 +1,62 @@
-# Ez-Kahoot Companion 1.4.1
+# Ez-Kahoot Companion 1.6.0
 
-La version 1.4 ajoute une recherche de candidat public depuis le texte et les choix réellement reçus par le joueur, sans UUID à saisir. Elle ne garantit pas de retrouver tous les quiz ; le panneau distingue le candidat recherché et la correction reçue après résultat. Les boutons True/False et Vrai/Faux sont associés uniquement comme paires complètes.
-
-Thème violet et blanc, monogramme K⚡ et police Montserrat livrée localement. Après remplacement des fichiers, actualise la carte de l’extension pour charger les nouveaux visuels.
-
-**Créé par thomas marsa.** Un petit panneau sur ton onglet Kahoot affiche les réponses d’un corrigé public ou importé et propose un Auto-clic facultatif.
+**Créé par thomas marsa.** Rejoins ta partie : le panneau s’ouvre automatiquement et recherche les réponses d’un quiz public. Aucun serveur Python, code de connexion ou compte supplémentaire n’est nécessaire pour ce mode.
 
 ## Installer ou mettre à jour
 
-1. Lance le serveur Ez-Kahoot.
-2. Dans Chrome, ouvre `chrome://extensions` et active **Mode développeur**. Dans Edge, utilise `edge://extensions`.
-3. Clique **Charger l’extension non empaquetée** et choisis ce dossier, contenant `manifest.json`.
-4. Épingle **Ez-Kahoot Companion**. **Alt+Maj+K** peut aussi l’ouvrir ; les raccourcis se règlent dans `chrome://extensions/shortcuts`.
-
-Pour mettre à jour une installation existante, remplace ses fichiers, clique **Actualiser** sur sa carte d’extension, puis relance le panneau dans Kahoot.
+1. Décompresse l’archive et conserve le dossier contenant `manifest.json`.
+2. Ouvre `chrome://extensions` dans Chrome ou `edge://extensions` dans Edge ; active **Mode développeur**.
+3. Clique **Charger l’extension non empaquetée** et sélectionne ce dossier. Pour une mise à jour, remplace les fichiers et actualise la carte de l’extension. Les nouvelles permissions donnent accès aux pages Kahoot et à la recherche publique.
+4. Recharge les onglets Kahoot déjà ouverts, puis rejoins ta partie.
 
 ## Utiliser
 
-1. Ouvre l’extension et clique **Connexion rapide**.
-2. Place-toi dans ton onglet Kahoot et clique **Lancer sur Kahoot**.
-3. Le petit panneau suit les questions. Active **Auto-clic** pour cliquer une fois sur une réponse entièrement identifiée ; il est désactivé au départ.
-4. La croix du panneau arrête la lecture et les clics. Il faut le relancer après un changement complet de page.
+Le panneau démarre automatiquement sur `kahoot.it` et `play.kahoot.it`. Il suit les questions et affiche les réponses confirmées. Fermer le panneau arrête son suivi jusqu’au rechargement de la page ou à une relance volontaire depuis le popup.
 
-Si le client transmet l’UUID d’un quiz public, le compagnon demande son corrigé au serveur local. Il peut aussi utiliser un quiz envoyé depuis la vue **Compagnon** du panel. Si la détection ne fournit pas de corrigé, le panneau l’indique.
+**Ouvrir automatiquement sur Kahoot** active ou désactive ce comportement et applique le réglage aux onglets ouverts. **Lancer sur Kahoot** permet de rouvrir le panneau. **Alt+Maj+K** ouvre le popup si ce raccourci est disponible.
 
-**Rechercher une question**, replié sous le bouton de lancement, permet de lire l’onglet ponctuellement ou de saisir la question. Les ressemblances restent signalées et ne déclenchent pas d’Auto-clic.
+L’Auto-clic est facultatif et désactivé au départ. Il exige une question exacte et unique, toutes les corrections connues, une seule bonne réponse et des boutons identifiés par leurs textes. Les réponses multiples restent affichées pour une sélection manuelle.
 
-## Connexion avancée
+## Comment les réponses sont retrouvées
 
-La connexion rapide utilise `http://127.0.0.1:8765` et associe la première origine d’extension valide qui la demande pour cette instance. Pour un autre port ou une autre installation, ouvre **Connexion avancée** et colle le code `EZK1.…` du panel, puis clique **Utiliser ce code**.
+- Si la page transmet l’UUID public du quiz, l’extension en charge le corrigé public.
+- Sinon, elle recherche un candidat à partir de la question et de ses propositions reçues ou visibles. Elle vérifie au plus vingt candidats issus de trois recherches, avec comparaison exacte des textes, des choix et du nombre d’éléments de la partie lorsqu’il est disponible. Plusieurs candidats compatibles restent signalés comme ambigus.
+- Un corrigé retrouvé reste utilisable pour les questions suivantes. Les appels identiques sont regroupés et mis en cache ; une limitation de fréquence de Kahoot suspend les nouvelles requêtes.
+- Le texte reçu dans l’état de la page peut compléter une question sans titre visible uniquement si le numéro de manche correspond et pendant trois secondes au maximum. Ce complément sert à l’affichage, sans autoriser de clic.
 
-Garde le serveur ouvert. Un redémarrage ou une régénération de code nécessite une nouvelle connexion. **Déconnecter** efface l’association enregistrée dans cette extension.
+Un PIN seul ne contient pas les réponses. Aucun fonctionnement universel n’est garanti pour un quiz privé, une question uniquement en image, une recherche sans candidat confirmé ou une page ne transmettant pas assez d’informations. Une **Correction reçue après la question** concerne une manche terminée et ne constitue pas une réponse anticipée.
 
-## Ce que fait l’Auto-clic
+## Quiz importé et connexion locale (facultatif)
 
-Le moteur exige une question exacte et unique, toutes les corrections connues, une seule bonne réponse et une correspondance complète des textes de choix. Il vérifie la manche et le bouton actif juste avant de cliquer. Les couleurs et l’ordre du quiz source ne déterminent jamais le bouton.
+Pour utiliser un JSON importé : lance le panel Ez-Kahoot, charge le quiz, puis **Compagnon → Envoyer ce quiz au compagnon**. Dans le popup, ouvre **Quiz importé et connexion locale**, clique **Connexion rapide**, puis **Lancer sur Kahoot**.
 
-Questions ambiguës, ressemblances, choix uniquement en images et réponses multiples restent manuels. Une réponse connue peut s’afficher avant l’activation des boutons, sans clic. Le compagnon utilise les boutons de la page ; il ne modifie ni le quiz ni les règles de score.
-
-Sur `/answer/result`, **Correction reçue après la question** désigne le résultat d’une manche terminée. Il n’est pas réutilisé pour la suivante. Un PIN, une URL générique ou un identifiant de partie ne garantit pas l’UUID public du quiz, ni ses réponses à l’avance.
+La connexion rapide utilise `http://127.0.0.1:8765`. Pour un autre port, colle le code `EZK1.…` du panel. Le serveur doit rester ouvert pour ce mode local ; son redémarrage invalide l’ancien code. **Déconnecter** supprime l’association locale, sans désactiver le mode autonome.
 
 ## Permissions et données
 
-- `activeTab` et `scripting` donnent accès à l’onglet invoqué. Le texte visible est lu en contexte isolé ; la sonde de métadonnées s’exécute en contexte `MAIN` de la page.
-- La sonde ne retourne que les métadonnées de quiz et, sur la route de résultat, la correction révélée de la manche. Les cookies et identifiants de connexion ne sont pas retournés.
-- `storage` conserve la connexion au serveur local. L’autorisation d’hôte reste limitée à `http://127.0.0.1/*`.
-
-Les pages de Kahoot peuvent changer. La lecture d’une partie réelle dépend des données que son client reçoit ; les tests sur pages contrôlées ne garantissent pas toutes les configurations.
+- `scripting` et l’accès aux hôtes `kahoot.it` / `play.kahoot.it` permettent le démarrage et la lecture automatiques du panneau. `activeTab` conserve le lancement manuel.
+- L’accès à `create.kahoot.it` permet de lire les quiz publics et leurs résultats de recherche directement depuis l’extension, avec `credentials: omit`. Aucun cookie ni identifiant de connexion n’est transmis.
+- La sonde `MAIN` lit uniquement des métadonnées de quiz, du texte de question et des corrections déjà révélées. Le panneau reste dans le contexte isolé de l’extension.
+- `storage` conserve le réglage automatique et l’éventuelle connexion locale. `http://127.0.0.1/*` sert uniquement au panel facultatif.
 
 ## Développement
 
-Les sources lisibles sont dans ce dossier. Depuis la racine du projet, reconstruis les fichiers générés avec :
+Depuis la racine du projet complet :
 
 ```sh
 python3 scripts/build_companion.py
+python3 -m unittest discover -s tests -v
+node --test extension/tests/*.test.mjs
 ```
 
-Les tests sont inclus dans la distribution complète, pas dans l’archive d’installation de l’extension seule. Depuis ce dossier :
+Les fichiers générés sont `live-runtime.js`, `probe-runtime.js` et `public/shared/`. Les tests sont inclus dans l’archive du projet complet, pas dans le ZIP d’installation de l’extension.
 
-```sh
-node --test tests/*.test.mjs
-```
+## Liens, OCR et mémoire — 1.6
+
+Ouvre **Liens, OCR et mémoire** dans le popup. Charge un lien de quiz accessible, puis choisis l’onglet joueur auquel l’associer. Les liens de devoir et les PIN sont distingués des liens de quiz.
+
+Pour une question en image : importe un PNG/JPEG/WebP ou utilise **Capturer un écran ou un onglet**, puis **Lire le texte**. Vérifie la séparation question/propositions avant **Rechercher le corrigé**. L’image reste locale ; seuls les termes de la question servent aux recherches publiques. Aucun service d’IA générative.
+
+La mémoire conserve les corrections reçues après résultat (100 entrées / 1 Mo). Les contradictions bloquent la réutilisation ; tu peux consulter, supprimer et exporter les entrées. Le diagnostic affiche les métadonnées de quiz reçues, sans journal réseau brut ni données de compte.
+
+L’OCR, les langues français/anglais et les licences sont dans `vendor/ocr/`. Conserve le dossier complet lors de l’installation. Recharge les onglets Kahoot pour que le récepteur passif démarre avant les connexions du jeu. Un corrigé privé non transmis reste inaccessible.

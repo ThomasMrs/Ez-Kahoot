@@ -1,0 +1,11 @@
+{
+  "name": "ez-kahoot-ocr-assets",
+  "version": "1.0.0",
+  "dependencies": {
+    "@tesseract.js-data/eng": "1.0.0",
+    "@tesseract.js-data/fra": "1.0.0",
+    "tesseract.js": "7.0.0",
+    "tesseract.js-core": "7.0.0"
+  },
+  "private": true
+}

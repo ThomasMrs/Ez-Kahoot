@@ -372,7 +372,7 @@ function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, initialA
       autoState.textContent = auto.checked ? (document.hidden ? 'Auto-clic en pause' : 'Auto-clic activé') : 'Auto-clic désactivé';
       subtitle.textContent = decision.status === 'revealed' ? 'Correction après la question' : attemptedRound ? 'Une tentative pour cette question' : 'Question en direct';
     }
-    quizSource.hidden = currentQuizSource !== 'public-search' || !hasQuiz(currentQuiz) || decision.status === 'revealed';
+    quizSource.hidden = !currentQuizSource || !hasQuiz(currentQuiz) || decision.status === 'revealed';
     answerOnce.disabled = decision.status !== 'ready' || attemptedRound || document.hidden;
   }
   function refresh() {
@@ -481,8 +481,10 @@ function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, initialA
     },
     setQuizSource(value) {
       if (disposed) return;
-      currentQuizSource = value === 'public-search' ? value : '';
-      quizSource.hidden = currentQuizSource !== 'public-search' || !hasQuiz(currentQuiz) || latest.decision.status === 'revealed';
+      const sources = { 'public-search': 'Candidat public retrouvé par questions', 'shared-link': 'Quiz chargé depuis ton lien', 'local-memory': 'Correction mémorisée après résultat', 'public-id': 'Quiz public identifié' };
+      currentQuizSource = Object.hasOwn(sources, value) ? value : '';
+      quizSource.textContent = sources[currentQuizSource] || '';
+      quizSource.hidden = !currentQuizSource || !hasQuiz(currentQuiz) || latest.decision.status === 'revealed';
     },
     setDiscoveryStatus(value) {
       if (disposed) return;
@@ -504,6 +506,19 @@ function mountLivePanel({ quiz, readPage, decideAnswer, activateAnswer, initialA
       refresh();
     }
   };
+}
+
+// Received text can explain an answer, but never authorizes a click by itself.
+function withReceivedQuestion(capture, received, now = Date.now()) {
+  if (!capture || capture.question || !received?.observedQuestion || now >= received.expiresAt) return capture;
+  let path;
+  try { path = new URL(capture.url).pathname; } catch { return capture; }
+  if (path !== received.path || !/^\/(?:v2\/)?gameblock\/?$/.test(path)) return capture;
+  const round = String(capture.roundId || '').trim().match(/^(?:question\s+)?([1-9]\d{0,4})(?:\s*(?:\/|sur|of)\s*([1-9]\d{0,4}))?$/i);
+  const observed = received.observedQuestion;
+  if (!round || (round[2] && Number(round[1]) > Number(round[2])) || round[1] !== observed.roundId ||
+      typeof observed.question !== 'string' || !observed.question.trim()) return capture;
+  return { ...capture, question: observed.question, phase: 'question', canAnswer: false, method: 'received' };
 }
 
 const readPage = () => ((() => {
@@ -623,43 +638,60 @@ const knownQuizMatchesCapture = (loaded,capture) => {
   if (!text || !Array.isArray(loaded?.questions) || !Array.isArray(capture?.choices) || capture.choices.length<2 || capture.choices.length>20) return false;
   const exact=loaded.questions.filter(question=>typeof question?.question==='string' && normalizeText(question.question)===text);
   if (exact.length!==1 || !Array.isArray(exact[0].choices) || exact[0].choices.length!==capture.choices.length) return false;
-  const source=exact[0].choices.map(choice=>typeof choice?.text==='string' ? normalizeText(choice.text) : '').sort();
-  const visible=capture.choices.map(choice=>typeof choice?.text==='string' ? normalizeText(choice.text) : '').sort();
+  const canonical=values=>{
+    const texts=values.map(choice=>typeof choice?.text==='string' ? normalizeText(choice.text) : '');
+    const pair=texts.map(text=>({true:'@true',vrai:'@true',false:'@false',faux:'@false'})[text]);
+    return texts.length===2 && pair.every(value=>typeof value==='string') && new Set(pair).size===2 ? pair.sort() : texts.sort();
+  };
+  const source=canonical(exact[0].choices);
+  const visible=canonical(capture.choices);
   return source.every((choice,index)=>choice && choice===visible[index]);
 };
-globalThis.__ezKahootStart = quiz => {
+globalThis.__ezKahootStart = (quiz, {publicOnly=false}={}) => {
   if (location.protocol !== 'https:' || !['kahoot.it','create.kahoot.it','play.kahoot.it'].includes(location.hostname)) return {ok:false};
   let panel;
   let disposed = false;
   let verifying = true;
-  panel = mountLivePanel({quiz,readPage,decideAnswer:(loaded,capture)=>{
+  let received = null;
+  const readObservedPage = () => withReceivedQuestion(readPage(), received);
+  panel = mountLivePanel({quiz,readPage:readObservedPage,decideAnswer:(loaded,capture)=>{
     const decision=decideAnswer(loaded,capture);
+    if (publicOnly && loaded && capture?.question && capture?.choices?.length>=2 && !knownQuizMatchesCapture(loaded,capture)) {
+      return {status:'waiting',answers:[],targetIndexes:[],message:'Recherche d’un corrigé correspondant à cette question et ses propositions…'};
+    }
     return verifying && decision.status==='ready' ? {...decision,status:'waiting',targetIndexes:[],message:'Vérification de la partie…'} : decision;
   },
     activateAnswer:(capture,index)=>activateAnswer(capture,index,readPage),
     onRefresh:async ({quiz:loaded,capture})=>{
-      if (disposed || !panel?.host.isConnected) return;
+      if (disposed || !panel?.host.isConnected || document.hidden) return;
+      if (publicOnly && loaded && /\/(?:join|lobby)(?:\/|$)/.test(location.pathname)) panel.setQuiz(null);
+      const requestStarted=Date.now();
+      const requestPath=location.pathname;
+      const requestRound=readPage().roundId;
       verifying = true;
       panel.refresh();
       try {
-        const response = await chrome.runtime.sendMessage({type:'EZK_DISCOVER',knownQuizId:loaded?.id||'',knownQuizMatchesObserved:knownQuizMatchesCapture(loaded,capture)});
-        if (disposed || !panel.host.isConnected) return;
+        const response = await chrome.runtime.sendMessage({type:'EZK_DISCOVER',publicOnly,knownQuizId:loaded?.id||'',knownQuizMatchesObserved:knownQuizMatchesCapture(loaded,capture)});
+        if (disposed || !panel.host.isConnected || location.pathname!==requestPath || readPage().roundId!==requestRound) return;
+        received = response?.metadata?.observedQuestion ? {path:requestPath,expiresAt:requestStarted+3000,observedQuestion:response.metadata.observedQuestion} : null;
         panel.setRevealedAnswer(response?.metadata?.revealedAnswer || null);
         const detected=response?.metadata?.quizId;
         if (detected && loaded?.id && detected.toLowerCase() !== loaded.id.toLowerCase()) panel.setQuiz(null);
         if (!response?.ok) { panel.setDiscoveryStatus(response?.error || 'Recherche du quiz indisponible.'); return; }
         const metadata=response.metadata||{};
-        let next=response.quiz||(detected && loaded?.id && detected.toLowerCase() !== loaded.id.toLowerCase() ? null : loaded);
+        const publicMismatch=publicOnly && ['not-found','ambiguous'].includes(response.searchStatus);
+        if (publicMismatch) panel.setQuiz(null);
+        let next=response.quiz||(publicMismatch ? null : (detected && loaded?.id && detected.toLowerCase() !== loaded.id.toLowerCase() ? null : loaded));
         const total=next?.questions?.length+(Number(next?.slideCount)||0)+(Number(next?.skippedCount)||0);
-        if (metadata.questionCount && next && total !== metadata.questionCount) {
+        if (metadata.questionCount && next && next.scope!=='question' && total !== metadata.questionCount) {
           panel.setQuiz(null);
           panel.setDiscoveryStatus('Le corrigé chargé ne correspond pas au nombre de questions de cette partie.');
           return;
         }
         if (response.quiz) {
           panel.setQuiz(response.quiz);
-          panel.setQuizSource(response.source==='public-search' ? 'public-search' : '');
-        } else if (next && response.source==='public-search' && response.searchStatus==='matched') panel.setQuizSource('public-search');
+          panel.setQuizSource(response.source || '');
+        } else if (next && response.source && response.searchStatus==='matched') panel.setQuizSource(response.source);
         if (response.discoveryMessage) panel.setDiscoveryStatus(response.discoveryMessage);
         else if (!next) panel.setDiscoveryStatus(metadata.quizId ? 'Chargement du corrigé…' : metadata.observedQuestion ? 'Recherche du quiz public à partir de la question reçue…' : 'Cette page n’a pas transmis l’identifiant ni le corrigé du quiz.');
       } catch { panel.setDiscoveryStatus('Rouvre le panneau depuis l’extension à jour.'); }

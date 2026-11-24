@@ -37,7 +37,7 @@ import webbrowser
 import zipfile
 
 
-VERSION = "1.4.1"
+VERSION = "1.6.0"
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
 EXTENSION = ROOT / "extension"
@@ -51,7 +51,37 @@ UUID_RE = re.compile(r"(?<![0-9a-f])[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]
 ALLOWED_HOSTS = {"create.kahoot.it", "play.kahoot.it", "kahoot.it", "www.kahoot.it"}
 EXTENSION_ORIGIN_RE = re.compile(r"chrome-extension://[a-p]{32}")
 LOOPBACK_HOST_RE = re.compile(r"(?:127\.0\.0\.1|localhost)(?::([0-9]{1,5}))?", re.I)
-EXTENSION_FILES = {"manifest.json", "popup.html", "popup.js", "popup.css", "reader.js", "matching.js", "connection.js", "background.js", "automation.js", "active-choice.js", "live-panel.js", "discovery.js", "probe-runtime.js", "live-runtime.js", "README.md", "Montserrat-Latin.woff2", "Montserrat-OFL.txt"}
+EXTENSION_FILES = {"received-question.js", "autostart.js", "public-api.js", "quiz-text.js", "manifest.json", "popup.html", "popup.js", "popup.css", "reader.js", "matching.js", "connection.js", "background.js", "automation.js", "active-choice.js", "live-panel.js", "discovery.js", "probe-runtime.js", "live-runtime.js", "README.md", "Montserrat-Latin.woff2", "Montserrat-OFL.txt"}
+EXTENSION_FILES.update({
+    'correction-memory.js',
+    'network-data.js',
+    'network-hook.js',
+    'network-runtime.js',
+    'observations.js',
+    'ocr-runner.js',
+    'ocr.js',
+    'quiz-links.js',
+    'session-context.js',
+    'tool-actions.js',
+    'tools.css',
+    'tools.html',
+    'tools.js',
+    'vendor/ocr/CORE-LICENSE.txt',
+    'vendor/ocr/NOTICE.txt',
+    'vendor/ocr/TESSERACT-LICENSE.txt',
+    'vendor/ocr/eng.traineddata.gz',
+    'vendor/ocr/fra.traineddata.gz',
+    'vendor/ocr/tesseract-core-lstm.wasm',
+    'vendor/ocr/tesseract-core-lstm.wasm.js',
+    'vendor/ocr/tesseract-core-relaxedsimd-lstm.wasm',
+    'vendor/ocr/tesseract-core-relaxedsimd-lstm.wasm.js',
+    'vendor/ocr/tesseract-core-simd-lstm.wasm',
+    'vendor/ocr/tesseract-core-simd-lstm.wasm.js',
+    'vendor/ocr/tesseract.min.js',
+    'vendor/ocr/tesseract.min.js.LICENSE.txt',
+    'vendor/ocr/worker.min.js',
+    'vendor/ocr/worker.min.js.LICENSE.txt',
+})
 
 # A comparison such as x<y is text, not an unfinished HTML element. Only hand
 # complete, recognized markup to HTMLParser; unknown angle brackets stay literal.
@@ -475,7 +505,7 @@ def extension_archive() -> bytes:
                 continue
             size = source.stat().st_size
             total_size += size
-            if size > 2 * 1024 * 1024 or total_size > MAX_BODY_BYTES:
+            if size > 16 * 1024 * 1024 or total_size > 96 * 1024 * 1024:
                 raise QuizError("Les fichiers du compagnon sont trop volumineux.", 413)
             archive.write(source, relative.as_posix())
     return output.getvalue()

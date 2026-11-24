@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../discovery.js', import.meta.url), 'utf8').replace(/^export\s+/, '');
+const source = ['quiz-text.js', 'discovery.js'].map(name => fs.readFileSync(new URL('../' + name, import.meta.url), 'utf8').replace(/^import[^\n]*\n/gm, '').replace(/^export\s+/gm, '')).join('\n');
 const first = '77c46705-dab1-4ca1-a435-c287194db522';
 const second = '6f5c6217-f9c5-47a6-940c-b0455260095a';
 const generic = '4ecba235-3153-4362-b498-26303748f758';
